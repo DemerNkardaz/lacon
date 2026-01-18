@@ -1,0 +1,206 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "LaCoN",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings_quoted" },
+    { "include": "#multiline_strings" },
+    { "include": "#keywords_special" },
+    { "include": "#keywords_bool" },
+    { "include": "#main_keys" },
+    { "include": "#dict_pointer" },
+    { "include": "#numeric_units" },
+    { "include": "#numbers" },
+    { "include": "#assignment_key" },
+    { "include": "#unquoted_strings" },
+    { "include": "#operators" },
+    { "include": "#arrays" }
+  ],
+  "repository": {
+    "main_keys": {
+      "patterns": [
+        {
+          "name": "entity.name.function.lacon",
+          "match": "^\\s*\\b([a-zA-Z][a-zA-Z0-9_-]*)\\b(?=\\s|$|\\{|>|\\()"
+        }
+      ]
+    },
+    "dict_pointer": {
+      "patterns": [
+        {
+          "name": "keyword.operator.navigation.lacon",
+          "match": ">"
+        },
+        {
+          "name": "entity.name.function.lacon",
+          "match": "(?<=>)\\s*\\b([a-zA-Z][a-zA-Z0-9_-]*)\\b"
+        }
+      ]
+    },
+    "assignment_key": {
+      "patterns": [
+        {
+          "name": "entity.other.attribute-name.lacon",
+          "match": "\\b[a-zA-Z0-9_-]+(?=\\s*=)"
+        }
+      ]
+    },
+    "comments": {
+      "patterns": [
+        { 
+          "name": "comment.line.double-slash.lacon", 
+          "match": "//.*$" 
+        },
+        { 
+          "name": "comment.block.lacon", 
+          "begin": "/\\*", 
+          "end": "\\*/" 
+        }
+      ]
+    },
+    "keywords_special": {
+      "patterns": [
+        { 
+          "name": "keyword.control.lacon", 
+          "match": "\\b(none|auto)\\b" 
+        }
+      ]
+    },
+    "keywords_bool": {
+      "patterns": [
+        { 
+          "name": "constant.language.boolean.lacon", 
+          "match": "\\b(true|false)\\b" 
+        }
+      ]
+    },
+    "numeric_units": {
+      "patterns": [
+        {
+          "name": "constant.numeric.lacon",
+          "match": "-?\\d+(\\.\\d+)?(mm|cm|pt|in|deg|em|rem|%|fr|rad)\\b"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        { 
+          "name": "constant.numeric.lacon", 
+          "match": "\\b-?\\d+(\\.\\d+)?\\b" 
+        }
+      ]
+    },
+    "strings_quoted": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.lacon",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            { 
+              "name": "constant.character.escape.lacon", 
+              "match": "\\\\." 
+            }
+          ]
+        }
+      ]
+    },
+    "multiline_strings": {
+      "patterns": [
+        {
+          "name": "string.unquoted.multiline.lacon",
+          "begin": "\\(",
+          "end": "\\)",
+          "patterns": [
+            { "include": "#strings_quoted" },
+            {
+              "name": "constant.character.escape.lacon",
+              "match": "\\\\."
+            },
+            {
+              "name": "punctuation.separator.lacon",
+              "match": ","
+            }
+          ]
+        }
+      ]
+    },
+    "unquoted_strings": {
+      "patterns": [
+        {
+          "match": "(?<==)\\s*([^\\s\\[\\]{}()=,//]+(?:\\\\.[^\\s\\[\\]{}()=,//]*)*)",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "name": "constant.character.escape.lacon",
+                  "match": "\\\\."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "match": "(?<=^|\\s)(?![a-zA-Z0-9_-]+=)([^\\s\\[\\]{}()=,//\"]+(?:\\\\.[^\\s\\[\\]{}()=,//\"]*)*)",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "name": "constant.character.escape.lacon",
+                  "match": "\\\\."
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "arrays": {
+      "patterns": [
+        {
+          "name": "meta.structure.array.lacon",
+          "begin": "\\[",
+          "end": "\\]",
+          "patterns": [
+            { "include": "#comments" },
+            { "include": "#strings_quoted" },
+            { "include": "#keywords_special" },
+            { "include": "#keywords_bool" },
+            { "include": "#numeric_units" },
+            { "include": "#numbers" },
+            {
+              "name": "punctuation.separator.array.lacon",
+              "match": ","
+            },
+            {
+              "match": "([^\\s\\[\\]{}()=,//\"]+(?:\\\\.[^\\s\\[\\]{}()=,//\"]*)*)",
+              "captures": {
+                "1": {
+                  "patterns": [
+                    {
+                      "name": "constant.character.escape.lacon",
+                      "match": "\\\\."
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        { 
+          "name": "keyword.operator.assignment.lacon", 
+          "match": "=" 
+        },
+        { 
+          "name": "punctuation.section.brackets.lacon", 
+          "match": "[\\[\\]{}()]" 
+        }
+      ]
+    }
+  },
+  "scopeName": "source.lacon"
+}

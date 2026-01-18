@@ -1,0 +1,25 @@
+{
+  "name": "lacon",
+  "displayName": "lacon",
+  "description": "LaCoN (Layout Configuration Notation) syntax highlight.",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.108.1"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "lacon",
+      "aliases": ["LaCoN", "lacon"],
+      "extensions": [".lacon"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "lacon",
+      "scopeName": "source.lacon",
+      "path": "./syntaxes/lacon.tmLanguage.json"
+    }]
+  }
+}
