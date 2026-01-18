@@ -5,6 +5,7 @@ function laconToJson(text) {
     const lines = text.split('\n');
     const result = {};
     const stack = [result];
+    const indentStack = [-1];
     const variableRegistry = {};
     let isMultiline = false;
     let isRawMultiline = false;
@@ -18,7 +19,8 @@ function laconToJson(text) {
     const multiKeyRegex = /^\s*\[([\w\s,-]+)\]\s*=?\s*(.+)$/;
     const multilineStartRegex = /^\s*([\w.-]+)\s*(@)?\(\s*$/;
     const arrayStartRegex = /^\s*([\w.-]+)\s*\[\s*$/;
-    for (let line of lines) {
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
         const currentLine = line.replace(/\r/g, '');
         const trimmed = currentLine.trim();
         if (isMultiline) {
@@ -59,7 +61,27 @@ function laconToJson(text) {
         const cleanLine = trimmed.replace(/\/\/.*$/, '').trim();
         if (!cleanLine || cleanLine.startsWith('/*'))
             continue;
+        const indentMatch = currentLine.match(/^(\s*)/);
+        const currentIndent = indentMatch ? indentMatch[1].length : 0;
+        if (cleanLine !== '}') {
+            while (stack.length > 1 && currentIndent <= indentStack[indentStack.length - 1]) {
+                stack.pop();
+                indentStack.pop();
+            }
+        }
         let currentScope = stack[stack.length - 1];
+        if (cleanLine === '}') {
+            if (stack.length > 1) {
+                stack.pop();
+                indentStack.pop();
+            }
+            continue;
+        }
+        if (varRegex.test(cleanLine)) {
+            const [, name, value] = cleanLine.match(varRegex);
+            variableRegistry[name] = unescapeString(unwrapQuotes(value.trim()));
+            continue;
+        }
         if (arrayStartRegex.test(cleanLine)) {
             const match = cleanLine.match(arrayStartRegex);
             arrayKey = match[1];
@@ -73,16 +95,6 @@ function laconToJson(text) {
             isMultiline = true;
             continue;
         }
-        if (cleanLine === '}') {
-            if (stack.length > 1)
-                stack.pop();
-            continue;
-        }
-        if (varRegex.test(cleanLine)) {
-            const [, name, value] = cleanLine.match(varRegex);
-            variableRegistry[name] = unescapeString(unwrapQuotes(value.trim()));
-            continue;
-        }
         if (blockStartRegex.test(cleanLine)) {
             const [, key1, key2] = cleanLine.match(blockStartRegex);
             if (key2) {
@@ -94,6 +106,7 @@ function laconToJson(text) {
                 currentScope[key1] = {};
                 stack.push(currentScope[key1]);
             }
+            indentStack.push(currentIndent);
             continue;
         }
         if (multiKeyRegex.test(cleanLine)) {
@@ -102,6 +115,21 @@ function laconToJson(text) {
             const val = parseValue(resolveVariables(value, variableRegistry), variableRegistry);
             keys.forEach(k => currentScope[k] = val);
             continue;
+        }
+        let nextLineIdx = i + 1;
+        let nextLine = lines[nextLineIdx];
+        while (nextLine !== undefined && !nextLine.trim()) {
+            nextLine = lines[++nextLineIdx];
+        }
+        if (nextLine !== undefined) {
+            const nextIndentMatch = nextLine.match(/^(\s*)/);
+            const nextIndent = nextIndentMatch ? nextIndentMatch[1].length : 0;
+            if (nextIndent > currentIndent && !cleanLine.includes('=') && !cleanLine.includes(' ') && !cleanLine.includes('>')) {
+                currentScope[cleanLine] = {};
+                stack.push(currentScope[cleanLine]);
+                indentStack.push(currentIndent);
+                continue;
+            }
         }
         processComplexLine(cleanLine, currentScope, variableRegistry);
     }
@@ -131,18 +159,13 @@ function ensureObject(parent, key) {
     }
 }
 function processComplexLine(line, scope, vars) {
-    // Улучшенная детекция оператора "+". 
-    // Оператор должен быть либо отделен пробелами " + ", либо идти сразу после пути ключа до значения.
-    // Мы ищем "+" только если он не находится внутри кавычек.
     let plusIndex = -1;
     let inQuotes = false;
     for (let i = 0; i < line.length; i++) {
         if (line[i] === '"' && line[i - 1] !== '\\')
             inQuotes = !inQuotes;
         if (!inQuotes && line[i] === '+') {
-            // Проверяем контекст: это оператор, если вокруг него пробелы или это первый встречный плюс вне значения
             const prefix = line.substring(0, i).trim();
-            // Если префикс выглядит как путь ключа (нет пробелов или пробел только в конце), считаем это оператором
             if (!prefix.includes(' ') || line[i - 1] === ' ' || line[i + 1] === ' ') {
                 plusIndex = i;
                 break;
@@ -166,7 +189,6 @@ function processComplexLine(line, scope, vars) {
         }
         return;
     }
-    // Оператор ">"
     if (line.includes('>')) {
         const parts = line.split('>').map(p => p.trim());
         let current = scope;
@@ -218,64 +240,58 @@ function parseInlinePairs(text, target, vars, overwrite) {
         target[key] = "";
         return;
     }
-    if (!trimmedText.includes('=')) {
-        const firstSpaceIndex = trimmedText.search(/\s/);
-        if (firstSpaceIndex === -1) {
-            if (!overwrite && typeof target[trimmedText] === 'object' && target[trimmedText] !== null)
-                return;
-            target[trimmedText] = true;
+    if (trimmedText.includes('=')) {
+        const keyPositions = [];
+        const findKeysRegex = /(?:^|\s+)([\w.-]+)\s*=/g;
+        let m;
+        while ((m = findKeysRegex.exec(trimmedText)) !== null) {
+            const prefix = trimmedText.substring(0, m.index);
+            const openBraces = (prefix.match(/\{/g) || []).length;
+            const closeBraces = (prefix.match(/\}/g) || []).length;
+            const openBrackets = (prefix.match(/\[/g) || []).length;
+            const closeBrackets = (prefix.match(/\]/g) || []).length;
+            if (openBraces === closeBraces && openBrackets === closeBrackets) {
+                keyPositions.push({
+                    key: m[1],
+                    start: (m.index ?? 0) + (m[0].indexOf(m[1])),
+                    valueStart: (m.index ?? 0) + m[0].length
+                });
+            }
+        }
+        if (keyPositions.length > 0) {
+            const firstKeyStart = keyPositions[0].start;
+            const leadText = trimmedText.substring(0, firstKeyStart).trim();
+            let currentTarget = target;
+            if (leadText) {
+                if (overwrite) {
+                    target[leadText] = {};
+                }
+                else {
+                    ensureObject(target, leadText);
+                }
+                currentTarget = target[leadText];
+            }
+            for (let i = 0; i < keyPositions.length; i++) {
+                const current = keyPositions[i];
+                const next = keyPositions[i + 1];
+                let rawValue = next
+                    ? trimmedText.substring(current.valueStart, next.start)
+                    : trimmedText.substring(current.valueStart);
+                currentTarget[current.key] = parseValue(resolveVariables(rawValue.trim(), vars), vars);
+            }
             return;
         }
+    }
+    const firstSpaceIndex = trimmedText.search(/\s/);
+    if (firstSpaceIndex === -1) {
+        if (!overwrite && typeof target[trimmedText] === 'object' && target[trimmedText] !== null)
+            return;
+        target[trimmedText] = true;
+    }
+    else {
         const key = trimmedText.substring(0, firstSpaceIndex);
         const value = trimmedText.substring(firstSpaceIndex).trim();
         target[key] = parseValue(resolveVariables(value, vars), vars);
-        return;
-    }
-    const keyPositions = [];
-    const findKeysRegex = /(?:^|\s+)([\w.-]+)\s*=/g;
-    let m;
-    while ((m = findKeysRegex.exec(trimmedText)) !== null) {
-        const prefix = trimmedText.substring(0, m.index);
-        const openBraces = (prefix.match(/\{/g) || []).length;
-        const closeBraces = (prefix.match(/\}/g) || []).length;
-        const openBrackets = (prefix.match(/\[/g) || []).length;
-        const closeBrackets = (prefix.match(/\]/g) || []).length;
-        if (openBraces === closeBraces && openBrackets === closeBrackets) {
-            keyPositions.push({
-                key: m[1],
-                start: (m.index ?? 0) + (m[0].indexOf(m[1])),
-                valueStart: (m.index ?? 0) + m[0].length
-            });
-        }
-    }
-    const firstKeyStart = keyPositions.length > 0 ? keyPositions[0].start : 0;
-    const leadText = trimmedText.substring(0, firstKeyStart).trim();
-    let currentTarget = target;
-    if (leadText && keyPositions.length > 0) {
-        if (overwrite) {
-            target[leadText] = {};
-        }
-        else {
-            ensureObject(target, leadText);
-        }
-        currentTarget = target[leadText];
-    }
-    if (keyPositions.length === 0) {
-        const firstSpaceIndex = trimmedText.search(/\s/);
-        if (firstSpaceIndex !== -1) {
-            const key = trimmedText.substring(0, firstSpaceIndex);
-            const value = trimmedText.substring(firstSpaceIndex).trim();
-            target[key] = parseValue(resolveVariables(value, vars), vars);
-        }
-        return;
-    }
-    for (let i = 0; i < keyPositions.length; i++) {
-        const current = keyPositions[i];
-        const next = keyPositions[i + 1];
-        let rawValue = next
-            ? trimmedText.substring(current.valueStart, next.start)
-            : trimmedText.substring(current.valueStart);
-        currentTarget[current.key] = parseValue(resolveVariables(rawValue.trim(), vars), vars);
     }
 }
 function processRawMultiline(lines) {

@@ -2,6 +2,7 @@ export function laconToJson(text: string): string {
     const lines = text.split('\n');
     const result: any = {};
     const stack: any[] = [result];
+    const indentStack: number[] = [-1];
     const variableRegistry: Record<string, string> = {};
     
     let isMultiline = false;
@@ -19,7 +20,8 @@ export function laconToJson(text: string): string {
     const multilineStartRegex = /^\s*([\w.-]+)\s*(@)?\(\s*$/;
     const arrayStartRegex = /^\s*([\w.-]+)\s*\[\s*$/;
 
-    for (let line of lines) {
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
         const currentLine = line.replace(/\r/g, '');
         const trimmed = currentLine.trim();
 
@@ -65,7 +67,31 @@ export function laconToJson(text: string): string {
         const cleanLine = trimmed.replace(/\/\/.*$/, '').trim();
         if (!cleanLine || cleanLine.startsWith('/*')) continue;
 
+        const indentMatch = currentLine.match(/^(\s*)/);
+        const currentIndent = indentMatch ? indentMatch[1].length : 0;
+
+        if (cleanLine !== '}') {
+            while (stack.length > 1 && currentIndent <= indentStack[indentStack.length - 1]) {
+                stack.pop();
+                indentStack.pop();
+            }
+        }
+
         let currentScope = stack[stack.length - 1];
+
+        if (cleanLine === '}') {
+            if (stack.length > 1) {
+                stack.pop();
+                indentStack.pop();
+            }
+            continue;
+        }
+
+        if (varRegex.test(cleanLine)) {
+            const [, name, value] = cleanLine.match(varRegex)!;
+            variableRegistry[name] = unescapeString(unwrapQuotes(value.trim()));
+            continue; 
+        }
 
         if (arrayStartRegex.test(cleanLine)) {
             const match = cleanLine.match(arrayStartRegex)!;
@@ -82,17 +108,6 @@ export function laconToJson(text: string): string {
             continue;
         }
 
-        if (cleanLine === '}') {
-            if (stack.length > 1) stack.pop();
-            continue;
-        }
-
-        if (varRegex.test(cleanLine)) {
-            const [, name, value] = cleanLine.match(varRegex)!;
-            variableRegistry[name] = unescapeString(unwrapQuotes(value.trim()));
-            continue; 
-        }
-
         if (blockStartRegex.test(cleanLine)) {
             const [, key1, key2] = cleanLine.match(blockStartRegex)!;
             if (key2) {
@@ -103,6 +118,7 @@ export function laconToJson(text: string): string {
                 currentScope[key1] = {}; 
                 stack.push(currentScope[key1]);
             }
+            indentStack.push(currentIndent);
             continue;
         }
 
@@ -112,6 +128,24 @@ export function laconToJson(text: string): string {
             const val = parseValue(resolveVariables(value, variableRegistry), variableRegistry);
             keys.forEach(k => currentScope[k] = val);
             continue;
+        }
+
+        let nextLineIdx = i + 1;
+        let nextLine = lines[nextLineIdx];
+        while (nextLine !== undefined && !nextLine.trim()) {
+            nextLine = lines[++nextLineIdx];
+        }
+
+        if (nextLine !== undefined) {
+            const nextIndentMatch = nextLine.match(/^(\s*)/);
+            const nextIndent = nextIndentMatch ? nextIndentMatch[1].length : 0;
+            
+            if (nextIndent > currentIndent && !cleanLine.includes('=') && !cleanLine.includes(' ') && !cleanLine.includes('>')) {
+                currentScope[cleanLine] = {};
+                stack.push(currentScope[cleanLine]);
+                indentStack.push(currentIndent);
+                continue;
+            }
         }
 
         processComplexLine(cleanLine, currentScope, variableRegistry);
@@ -233,69 +267,58 @@ function parseInlinePairs(text: string, target: any, vars: Record<string, string
         return;
     }
 
-    if (!trimmedText.includes('=')) {
-        const firstSpaceIndex = trimmedText.search(/\s/);
-        if (firstSpaceIndex === -1) {
-            if (!overwrite && typeof target[trimmedText] === 'object' && target[trimmedText] !== null) return;
-            target[trimmedText] = true;
+    if (trimmedText.includes('=')) {
+        const keyPositions: {key: string, start: number, valueStart: number}[] = [];
+        const findKeysRegex = /(?:^|\s+)([\w.-]+)\s*=/g;
+        let m;
+        while ((m = findKeysRegex.exec(trimmedText)) !== null) {
+            const prefix = trimmedText.substring(0, m.index);
+            const openBraces = (prefix.match(/\{/g) || []).length;
+            const closeBraces = (prefix.match(/\}/g) || []).length;
+            const openBrackets = (prefix.match(/\[/g) || []).length;
+            const closeBrackets = (prefix.match(/\]/g) || []).length;
+            
+            if (openBraces === closeBraces && openBrackets === closeBrackets) {
+                keyPositions.push({
+                    key: m[1],
+                    start: (m.index ?? 0) + (m[0].indexOf(m[1])),
+                    valueStart: (m.index ?? 0) + m[0].length
+                });
+            }
+        }
+
+        if (keyPositions.length > 0) {
+            const firstKeyStart = keyPositions[0].start;
+            const leadText = trimmedText.substring(0, firstKeyStart).trim();
+            
+            let currentTarget = target;
+            if (leadText) {
+                if (overwrite) { target[leadText] = {}; }
+                else { ensureObject(target, leadText); }
+                currentTarget = target[leadText];
+            }
+
+            for (let i = 0; i < keyPositions.length; i++) {
+                const current = keyPositions[i];
+                const next = keyPositions[i + 1];
+                let rawValue = next 
+                    ? trimmedText.substring(current.valueStart, next.start) 
+                    : trimmedText.substring(current.valueStart);
+
+                currentTarget[current.key] = parseValue(resolveVariables(rawValue.trim(), vars), vars);
+            }
             return;
         }
+    }
+
+    const firstSpaceIndex = trimmedText.search(/\s/);
+    if (firstSpaceIndex === -1) {
+        if (!overwrite && typeof target[trimmedText] === 'object' && target[trimmedText] !== null) return;
+        target[trimmedText] = true;
+    } else {
         const key = trimmedText.substring(0, firstSpaceIndex);
         const value = trimmedText.substring(firstSpaceIndex).trim();
         target[key] = parseValue(resolveVariables(value, vars), vars);
-        return;
-    }
-
-    const keyPositions: {key: string, start: number, valueStart: number}[] = [];
-    const findKeysRegex = /(?:^|\s+)([\w.-]+)\s*=/g;
-    let m;
-    while ((m = findKeysRegex.exec(trimmedText)) !== null) {
-        const prefix = trimmedText.substring(0, m.index);
-        const openBraces = (prefix.match(/\{/g) || []).length;
-        const closeBraces = (prefix.match(/\}/g) || []).length;
-        const openBrackets = (prefix.match(/\[/g) || []).length;
-        const closeBrackets = (prefix.match(/\]/g) || []).length;
-        
-        if (openBraces === closeBraces && openBrackets === closeBrackets) {
-            keyPositions.push({
-                key: m[1],
-                start: (m.index ?? 0) + (m[0].indexOf(m[1])),
-                valueStart: (m.index ?? 0) + m[0].length
-            });
-        }
-    }
-
-    const firstKeyStart = keyPositions.length > 0 ? keyPositions[0].start : 0;
-    const leadText = trimmedText.substring(0, firstKeyStart).trim();
-    
-    let currentTarget = target;
-    if (leadText && keyPositions.length > 0) {
-        if (overwrite) {
-            target[leadText] = {}; 
-        } else {
-            ensureObject(target, leadText);
-        }
-        currentTarget = target[leadText];
-    }
-
-    if (keyPositions.length === 0) {
-        const firstSpaceIndex = trimmedText.search(/\s/);
-        if (firstSpaceIndex !== -1) {
-            const key = trimmedText.substring(0, firstSpaceIndex);
-            const value = trimmedText.substring(firstSpaceIndex).trim();
-            target[key] = parseValue(resolveVariables(value, vars), vars);
-        }
-        return;
-    }
-
-    for (let i = 0; i < keyPositions.length; i++) {
-        const current = keyPositions[i];
-        const next = keyPositions[i + 1];
-        let rawValue = next 
-            ? trimmedText.substring(current.valueStart, next.start) 
-            : trimmedText.substring(current.valueStart);
-
-        currentTarget[current.key] = parseValue(resolveVariables(rawValue.trim(), vars), vars);
     }
 }
 
