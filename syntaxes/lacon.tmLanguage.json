@@ -398,7 +398,7 @@
       "patterns": [
         {
           "name": "constant.numeric.lacon",
-          "match": "-?\\d+(\\.\\d+)?(mm|cm|pt|in|deg|em|rem|%|fr|rad)\\b"
+          "match": "(?<![\\p{L}_])-?\\d+(\\.\\d+)?(mm|cm|pt|in|deg|em|rem|%|fr|rad|Hz|kHz|Kb|MB|GB|TB|s|ms|ch|ex|vw|vh|vmin|vmax|dpi|ppi|x|fps)\\b"
         }
       ]
     },
