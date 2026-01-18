@@ -6,20 +6,37 @@
   "engines": {
     "vscode": "^1.108.1"
   },
+  "main": "./out/extension.js",
   "categories": [
     "Programming Languages"
   ],
   "contributes": {
-    "languages": [{
-      "id": "lacon",
-      "aliases": ["LaCoN", "lacon"],
-      "extensions": [".lacon"],
-      "configuration": "./language-configuration.json"
-    }],
-    "grammars": [{
-      "language": "lacon",
-      "scopeName": "source.lacon",
-      "path": "./syntaxes/lacon.tmLanguage.json"
-    }]
+    "languages": [
+      {
+        "id": "lacon",
+        "aliases": [
+          "LaCoN",
+          "lacon"
+        ],
+        "extensions": [
+          ".lacon"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "lacon",
+        "scopeName": "source.lacon",
+        "path": "./syntaxes/lacon.tmLanguage.json"
+      }
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.9",
+    "@types/vscode": "^1.108.1"
+  },
+  "dependencies": {
+    "@vscode/l10n": "^0.0.18"
   }
 }

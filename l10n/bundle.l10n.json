@@ -1,0 +1,15 @@
+{
+    "unicode.preview.title": "### Unicode Preview",
+    "unicode.property": "Property",
+    "unicode.value": "Value",
+    "unicode.category": "Category",
+    "unicode.category.letter": "Letter",
+    "unicode.category.number": "Number",
+    "unicode.category.punctuation": "Punctuation",
+    "unicode.category.symbol": "Symbol",
+    "unicode.category.separator": "Separator",
+    "var.title": "###  Variable: ",
+    "var.current": "Current Value",
+    "var.defined": "Defined at",
+    "var.line": "Line"
+}

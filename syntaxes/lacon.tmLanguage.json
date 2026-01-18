@@ -3,6 +3,7 @@
   "name": "LaCoN",
   "patterns": [
     { "include": "#comments" },
+    { "include": "#unicode_escape" },
     { "include": "#strings_quoted" },
     { "include": "#multiline_strings" },
     { "include": "#keywords_variable" },
@@ -12,6 +13,7 @@
     { "include": "#dict_pointer" },
     { "include": "#numeric_units" },
     { "include": "#numbers" },
+    { "include": "#hex_numbers" },
     { "include": "#assignment_key" },
     { "include": "#math_operators" },
     { "include": "#unquoted_strings" },
@@ -19,6 +21,23 @@
     { "include": "#arrays" }
   ],
   "repository": {
+    "unicode_escape": {
+      "name": "constant.character.escape.unicode.lacon",
+      "begin": "\\\\u\\{",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.escape.begin.lacon" }
+      },
+      "end": "\\}",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.escape.end.lacon" }
+      },
+      "patterns": [
+        {
+          "name": "constant.numeric.hex.lacon",
+          "match": "[0-9a-fA-F]+"
+        }
+      ]
+    },
     "main_keys": {
       "patterns": [
         {
@@ -64,7 +83,7 @@
       "patterns": [
         { 
           "name": "storage.type.lacon", 
-          "match": "\\$[\\p{L}_][\\p{L}0-9._-]*"
+          "match": "\\$[\\p{L}_](?:[\\p{L}0-9._-]*[\\p{L}0-9_])?"
         }
       ]
     },
@@ -88,7 +107,7 @@
       "patterns": [
         {
           "name": "keyword.operator.lacon",
-          "match": "(\\+|\\-|\\*|/|%|\\^|×|÷|⋅|−|—|–|±|√|∛|∜|∶)"
+          "match": "(\\+|\\-|\\*|/|%|\\^|×|÷|⋅|−|±|√|∛|∜|∶)"
         }
       ]
     },
@@ -108,6 +127,14 @@
         }
       ]
     },
+    "hex_numbers": {
+      "patterns": [
+        { 
+          "name": "constant.numeric.lacon", 
+          "match": "\\b0[xX][0-9a-fA-F]+\\b" 
+        }
+      ]
+    },
     "strings_quoted": {
       "patterns": [
         {
@@ -115,6 +142,7 @@
           "begin": "\"",
           "end": "\"",
           "patterns": [
+            { "include": "#unicode_escape" },
             { 
               "name": "constant.character.escape.lacon", 
               "match": "\\\\." 
@@ -130,6 +158,7 @@
           "begin": "\\(",
           "end": "\\)",
           "patterns": [
+            { "include": "#unicode_escape" },
             { "include": "#strings_quoted" },
             {
               "name": "constant.character.escape.lacon",
@@ -150,6 +179,7 @@
           "captures": {
             "1": {
               "patterns": [
+                { "include": "#unicode_escape" },
                 {
                   "name": "constant.character.escape.lacon",
                   "match": "\\\\."
@@ -163,6 +193,7 @@
           "captures": {
             "1": {
               "patterns": [
+                { "include": "#unicode_escape" },
                 {
                   "name": "constant.character.escape.lacon",
                   "match": "\\\\."
@@ -181,6 +212,7 @@
           "end": "\\]",
           "patterns": [
             { "include": "#comments" },
+            { "include": "#unicode_escape" },
             { "include": "#strings_quoted" },
             { "include": "#keywords_special" },
             { "include": "#keywords_bool" },
@@ -195,6 +227,7 @@
               "captures": {
                 "1": {
                   "patterns": [
+                    { "include": "#unicode_escape" },
                     {
                       "name": "constant.character.escape.lacon",
                       "match": "\\\\."
