@@ -2,7 +2,7 @@
   "name": "lacon",
   "displayName": "lacon",
   "description": "LaCoN (Layout Configuration Notation) syntax highlight.",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "engines": {
     "vscode": "^1.108.1"
   },
@@ -10,15 +10,15 @@
   "categories": [
     "Programming Languages"
   ],
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/DemerNkardaz/lacon-vscode.git"
-	},
-	"activationEvents": [
-		"onLanguage:lacon",
-		"onCommand:lacon.toggleJsonPreview"
-	],
-	"icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DemerNkardaz/lacon-vscode.git"
+  },
+  "activationEvents": [
+    "onLanguage:lacon",
+    "onCommand:lacon.toggleJsonPreview"
+  ],
+  "icon": "icons/icon.png",
   "contributes": {
     "commands": [
       {
@@ -47,7 +47,11 @@
         "extensions": [
           ".lacon"
         ],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "dark": "./icons/icon.svg",
+          "light": "./icons/icon.svg"
+        }
       }
     ],
     "grammars": [
