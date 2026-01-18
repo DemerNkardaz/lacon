@@ -14,10 +14,9 @@ function laconToJson(text) {
     let isArrayMode = false;
     let arrayKey = '';
     let arrayContent = [];
-    // Обновлено: varRegex теперь проверяет, что перед $ нет обратного слеша
     const varRegex = /^\s*(?<!\\)\$([\w.-]+)\s+(.+)$/;
     const blockStartRegex = /^\s*([\w.-]+)\s*(?:>\s*([\w.-]+)\s*)?\{/;
-    const multiKeyRegex = /^\s*\[([\w\s,-]+)\]\s*=?\s*(.+)$/;
+    const multiKeyRegex = /^\s*\[([\w\s,*-]+)\]\s*=?\s*(.+)$/;
     const multilineStartRegex = /^\s*([\w.-]+)\s*(@)?\(\s*$/;
     const arrayStartRegex = /^\s*([\w.-]+)\s*\[\s*$/;
     for (let i = 0; i < lines.length; i++) {
@@ -30,7 +29,6 @@ function laconToJson(text) {
                 const finalValue = isRawMultiline
                     ? processRawMultiline(multilineContent)
                     : processQuotedMultiline(multilineContent);
-                // Сначала разрешаем переменные, затем убираем экраны \$
                 const resolved = resolveVariables(finalValue, variableRegistry);
                 const processedValue = isRawMultiline ? resolved : unescapeString(resolved);
                 if (typeof currentScope[multilineKey] === 'string' && currentScope[multilineKey] !== "") {
@@ -114,8 +112,7 @@ function laconToJson(text) {
         if (multiKeyRegex.test(cleanLine)) {
             const [, keysStr, value] = cleanLine.match(multiKeyRegex);
             const keys = keysStr.split(',').map(k => k.trim());
-            const val = parseValue(resolveVariables(value, variableRegistry), variableRegistry);
-            keys.forEach(k => currentScope[k] = val);
+            assignMultiValues(currentScope, keys, value, variableRegistry);
             continue;
         }
         let nextLineIdx = i + 1;
@@ -138,7 +135,6 @@ function laconToJson(text) {
     return JSON.stringify(result, null, 2);
 }
 exports.laconToJson = laconToJson;
-// Изменено: добавлено преобразование \$ в $
 function unescapeString(str) {
     return str.replace(/\\(n|r|t|b|f|"|\\|\$|u\{([0-9A-Fa-f]+)\})/g, (match, type, unicodeCode) => {
         switch (type[0]) {
@@ -149,7 +145,7 @@ function unescapeString(str) {
             case 'f': return '\f';
             case '"': return '"';
             case '\\': return '\\';
-            case '$': return '$'; // Поддержка экранированного доллара
+            case '$': return '$';
             case 'u':
                 const codePoint = parseInt(unicodeCode, 16);
                 return String.fromCodePoint(codePoint);
@@ -246,19 +242,16 @@ function parseInlinePairs(text, target, vars, overwrite) {
     }
     if (trimmedText.includes('=')) {
         const keyPositions = [];
-        const findKeysRegex = /(?:^|\s+)([\w.-]+)\s*=/g;
+        const findKeysRegex = /(?:^|\s+)(?:([\w.-]+)|\[([\w\s,*-]+)\])\s*=/g;
         let m;
         while ((m = findKeysRegex.exec(trimmedText)) !== null) {
             const prefix = trimmedText.substring(0, m.index);
-            const openBraces = (prefix.match(/\{/g) || []).length;
-            const closeBraces = (prefix.match(/\}/g) || []).length;
-            const openBrackets = (prefix.match(/\[/g) || []).length;
-            const closeBrackets = (prefix.match(/\]/g) || []).length;
-            if (openBraces === closeBraces && openBrackets === closeBrackets) {
+            if (isBalanced(prefix)) {
                 keyPositions.push({
-                    key: m[1],
-                    start: (m.index ?? 0) + (m[0].indexOf(m[1])),
-                    valueStart: (m.index ?? 0) + m[0].length
+                    key: m[1] || m[2],
+                    start: (m.index ?? 0) + (m[0].indexOf(m[1] || '[' + m[2])),
+                    valueStart: (m.index ?? 0) + m[0].length,
+                    isMulti: !!m[2]
                 });
             }
         }
@@ -281,7 +274,13 @@ function parseInlinePairs(text, target, vars, overwrite) {
                 let rawValue = next
                     ? trimmedText.substring(current.valueStart, next.start)
                     : trimmedText.substring(current.valueStart);
-                currentTarget[current.key] = parseValue(resolveVariables(rawValue.trim(), vars), vars);
+                if (current.isMulti) {
+                    const keys = current.key.split(',').map(k => k.trim());
+                    assignMultiValues(currentTarget, keys, rawValue.trim(), vars);
+                }
+                else {
+                    currentTarget[current.key] = parseValue(resolveVariables(rawValue.trim(), vars), vars);
+                }
             }
             return;
         }
@@ -297,6 +296,53 @@ function parseInlinePairs(text, target, vars, overwrite) {
         const value = trimmedText.substring(firstSpaceIndex).trim();
         target[key] = parseValue(resolveVariables(value, vars), vars);
     }
+}
+function assignMultiValues(target, keys, rawValue, vars) {
+    const resolved = resolveVariables(rawValue, vars);
+    const parsed = parseValue(resolved, vars);
+    let currentPrefix = "";
+    const processedKeys = keys.map((k) => {
+        let keyName = k.trim();
+        if (keyName.includes('*')) {
+            const parts = keyName.split('*');
+            currentPrefix = parts[0];
+            keyName = currentPrefix + parts[1];
+        }
+        else if (currentPrefix) {
+            keyName = currentPrefix + keyName;
+        }
+        return keyName;
+    });
+    if (Array.isArray(parsed) && parsed.length === processedKeys.length) {
+        processedKeys.forEach((k, idx) => {
+            target[k] = parsed[idx];
+        });
+    }
+    else {
+        processedKeys.forEach(k => {
+            target[k] = parsed;
+        });
+    }
+}
+function isBalanced(text) {
+    let brackets = 0;
+    let braces = 0;
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+        if (text[i] === '"' && text[i - 1] !== '\\')
+            inQuotes = !inQuotes;
+        if (!inQuotes) {
+            if (text[i] === '[')
+                brackets++;
+            if (text[i] === ']')
+                brackets--;
+            if (text[i] === '{')
+                braces++;
+            if (text[i] === '}')
+                braces--;
+        }
+    }
+    return brackets === 0 && braces === 0;
 }
 function processRawMultiline(lines) {
     if (lines.length === 0)
@@ -326,9 +372,7 @@ function processQuotedMultiline(lines) {
     })
         .join('\n');
 }
-// Изменено: resolveVariables теперь игнорирует \$
 function resolveVariables(value, vars) {
-    // Используем отрицательный просмотр назад (?<!\\), чтобы не матчить \$
     return value.replace(/(?<!\\)\$([\w.-]+)(~?)/g, (match, varName) => vars[varName] !== undefined ? vars[varName] : match);
 }
 function unwrapQuotes(val) {
@@ -360,25 +404,29 @@ function parseValue(val, vars) {
         const items = [];
         let current = "";
         let depth = 0;
-        for (let char of inner) {
-            if (char === '[' || char === '{')
-                depth++;
-            if (char === ']' || char === '}')
-                depth--;
-            if (char === ',' && depth === 0) {
-                items.push(current.trim());
-                current = "";
+        let inQuotes = false;
+        for (let i = 0; i < inner.length; i++) {
+            const char = inner[i];
+            if (char === '"' && inner[i - 1] !== '\\')
+                inQuotes = !inQuotes;
+            if (!inQuotes) {
+                if (char === '[' || char === '{')
+                    depth++;
+                if (char === ']' || char === '}')
+                    depth--;
+                if (char === ',' && depth === 0) {
+                    items.push(current.trim());
+                    current = "";
+                    continue;
+                }
             }
-            else {
-                current += char;
-            }
+            current += char;
         }
         items.push(current.trim());
         return items.map(v => parseValue(v, vars));
     }
     if (/^-?\d+(\.\d+)?$/.test(val))
         return Number(val);
-    // В конце обычных строк тоже нужно запустить unescapeString, чтобы убрать \ из \$
     return unescapeString(val);
 }
 //# sourceMappingURL=laconToJson.js.map

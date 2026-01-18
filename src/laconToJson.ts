@@ -16,7 +16,7 @@ export function laconToJson(text: string): string {
 
     const varRegex = /^\s*(?<!\\)\$([\w.-]+)\s+(.+)$/;
     const blockStartRegex = /^\s*([\w.-]+)\s*(?:>\s*([\w.-]+)\s*)?\{/;
-    const multiKeyRegex = /^\s*\[([\w\s,-]+)\]\s*=?\s*(.+)$/;
+    const multiKeyRegex = /^\s*\[([\w\s,*-]+)\]\s*=?\s*(.+)$/;
     const multilineStartRegex = /^\s*([\w.-]+)\s*(@)?\(\s*$/;
     const arrayStartRegex = /^\s*([\w.-]+)\s*\[\s*$/;
 
@@ -125,8 +125,7 @@ export function laconToJson(text: string): string {
         if (multiKeyRegex.test(cleanLine)) {
             const [, keysStr, value] = cleanLine.match(multiKeyRegex)!;
             const keys = keysStr.split(',').map(k => k.trim());
-            const val = parseValue(resolveVariables(value, variableRegistry), variableRegistry);
-            keys.forEach(k => currentScope[k] = val);
+            assignMultiValues(currentScope, keys, value, variableRegistry);
             continue;
         }
 
@@ -269,21 +268,17 @@ function parseInlinePairs(text: string, target: any, vars: Record<string, string
     }
 
     if (trimmedText.includes('=')) {
-        const keyPositions: {key: string, start: number, valueStart: number}[] = [];
-        const findKeysRegex = /(?:^|\s+)([\w.-]+)\s*=/g;
+        const keyPositions: {key: string, start: number, valueStart: number, isMulti: boolean}[] = [];
+        const findKeysRegex = /(?:^|\s+)(?:([\w.-]+)|\[([\w\s,*-]+)\])\s*=/g;
         let m;
         while ((m = findKeysRegex.exec(trimmedText)) !== null) {
             const prefix = trimmedText.substring(0, m.index);
-            const openBraces = (prefix.match(/\{/g) || []).length;
-            const closeBraces = (prefix.match(/\}/g) || []).length;
-            const openBrackets = (prefix.match(/\[/g) || []).length;
-            const closeBrackets = (prefix.match(/\]/g) || []).length;
-            
-            if (openBraces === closeBraces && openBrackets === closeBrackets) {
+            if (isBalanced(prefix)) {
                 keyPositions.push({
-                    key: m[1],
-                    start: (m.index ?? 0) + (m[0].indexOf(m[1])),
-                    valueStart: (m.index ?? 0) + m[0].length
+                    key: m[1] || m[2],
+                    start: (m.index ?? 0) + (m[0].indexOf(m[1] || '[' + m[2])),
+                    valueStart: (m.index ?? 0) + m[0].length,
+                    isMulti: !!m[2]
                 });
             }
         }
@@ -306,7 +301,12 @@ function parseInlinePairs(text: string, target: any, vars: Record<string, string
                     ? trimmedText.substring(current.valueStart, next.start) 
                     : trimmedText.substring(current.valueStart);
 
-                currentTarget[current.key] = parseValue(resolveVariables(rawValue.trim(), vars), vars);
+                if (current.isMulti) {
+                    const keys = current.key.split(',').map(k => k.trim());
+                    assignMultiValues(currentTarget, keys, rawValue.trim(), vars);
+                } else {
+                    currentTarget[current.key] = parseValue(resolveVariables(rawValue.trim(), vars), vars);
+                }
             }
             return;
         }
@@ -321,6 +321,51 @@ function parseInlinePairs(text: string, target: any, vars: Record<string, string
         const value = trimmedText.substring(firstSpaceIndex).trim();
         target[key] = parseValue(resolveVariables(value, vars), vars);
     }
+}
+
+function assignMultiValues(target: any, keys: string[], rawValue: string, vars: Record<string, string>) {
+    const resolved = resolveVariables(rawValue, vars);
+    const parsed = parseValue(resolved, vars);
+
+    let currentPrefix = "";
+    const processedKeys = keys.map((k) => {
+        let keyName = k.trim();
+        
+        if (keyName.includes('*')) {
+            const parts = keyName.split('*');
+            currentPrefix = parts[0];
+            keyName = currentPrefix + parts[1];
+        } else if (currentPrefix) {
+            keyName = currentPrefix + keyName;
+        }
+        return keyName;
+    });
+
+    if (Array.isArray(parsed) && parsed.length === processedKeys.length) {
+        processedKeys.forEach((k, idx) => {
+            target[k] = parsed[idx];
+        });
+    } else {
+        processedKeys.forEach(k => {
+            target[k] = parsed;
+        });
+    }
+}
+
+function isBalanced(text: string): boolean {
+    let brackets = 0;
+    let braces = 0;
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+        if (text[i] === '"' && text[i-1] !== '\\') inQuotes = !inQuotes;
+        if (!inQuotes) {
+            if (text[i] === '[') brackets++;
+            if (text[i] === ']') brackets--;
+            if (text[i] === '{') braces++;
+            if (text[i] === '}') braces--;
+        }
+    }
+    return brackets === 0 && braces === 0;
 }
 
 function processRawMultiline(lines: string[]): string {
@@ -383,15 +428,20 @@ function parseValue(val: string, vars: Record<string, string>): any {
         const items: string[] = [];
         let current = "";
         let depth = 0;
-        for (let char of inner) {
-            if (char === '[' || char === '{') depth++;
-            if (char === ']' || char === '}') depth--;
-            if (char === ',' && depth === 0) {
-                items.push(current.trim());
-                current = "";
-            } else {
-                current += char;
+        let inQuotes = false;
+        for (let i = 0; i < inner.length; i++) {
+            const char = inner[i];
+            if (char === '"' && inner[i-1] !== '\\') inQuotes = !inQuotes;
+            if (!inQuotes) {
+                if (char === '[' || char === '{') depth++;
+                if (char === ']' || char === '}') depth--;
+                if (char === ',' && depth === 0) {
+                    items.push(current.trim());
+                    current = "";
+                    continue;
+                }
             }
+            current += char;
         }
         items.push(current.trim());
         return items.map(v => parseValue(v, vars));

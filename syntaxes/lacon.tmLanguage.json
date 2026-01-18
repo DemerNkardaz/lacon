@@ -44,6 +44,7 @@
             { "include": "#keywords_bool" },
             { "include": "#numeric_units" },
             { "include": "#numbers" },
+            { "include": "#math_operators" },
             {
               "name": "punctuation.separator.array.lacon",
               "match": ","
@@ -104,8 +105,8 @@
     "multiple_keys": {
       "patterns": [
         {
-          "comment": "Multiple keys with assignment [key, key] =",
-          "begin": "^\\s*\\[(?=[^\\]]*\\]\\s*=)",
+          "comment": "Multiple keys with assignment [key, key] = (точное совпадение)",
+          "begin": "\\[(?=[^\\]]*\\]\\s*=)",
           "end": "\\]",
           "beginCaptures": {
             "0": { "name": "punctuation.section.brackets.lacon" }
@@ -125,8 +126,8 @@
           ]
         },
         {
-          "comment": "Multiple keys with space [key, key] value",
-          "begin": "^\\s*\\[(?=[^\\]]*\\]\\s+[^=])",
+          "comment": "Multiple keys with space [key, key] value (только если это не значение ключа)",
+          "begin": "(?<!=)\\s*\\[(?=[^\\]]*\\]\\s+[^=,])",
           "end": "\\]",
           "beginCaptures": {
             "0": { "name": "punctuation.section.brackets.lacon" }
@@ -160,12 +161,13 @@
       ]
     },
     "assignment_key": {
-      "patterns": [
-        {
-          "name": "entity.other.attribute-name.lacon",
-          "match": "\\b[\\p{L}0-9_-]+(?=\\s*=)"
-        }
-      ]
+        "patterns": [
+          {
+            "comment": "Standard key assignment or key before multi-key block",
+            "name": "entity.other.attribute-name.lacon",
+            "match": "\\b[\\p{L}0-9_-]+(?=\\s*=|\\s+\\[)"
+          }
+        ]
     },
     "comments": {
       "patterns": [
@@ -373,7 +375,7 @@
     "keywords_special": {
       "patterns": [
         { 
-          "name": "keyword.control.lacon", 
+          "name": "support.type.lacon", 
           "match": "\\b(none|auto)\\b" 
         }
       ]
