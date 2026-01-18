@@ -3,6 +3,7 @@
   "name": "LaCoN",
   "patterns": [
     { "include": "#comments" },
+    { "include": "#multiple_keys" },
     { "include": "#unicode_escape" },
     { "include": "#strings_quoted" },
     { "include": "#multiline_strings" },
@@ -11,7 +12,6 @@
     { "include": "#keywords_special" },
     { "include": "#keywords_bool" },
     { "include": "#main_keys" },
-    { "include": "#multiple_keys" },
     { "include": "#dict_pointer" },
     { "include": "#numeric_units" },
     { "include": "#numbers" },
@@ -96,7 +96,7 @@
       "patterns": [
         {
           "comment": "Multiple keys with assignment [key, key] =",
-          "begin": "^(\\s*)\\[(?=[^\\]]*\\]\\s*=)",
+          "begin": "^\\s*\\[(?=[^\\]]*\\]\\s*=)",
           "end": "\\]",
           "beginCaptures": {
             "0": { "name": "punctuation.section.brackets.lacon" }
@@ -117,7 +117,7 @@
         },
         {
           "comment": "Multiple keys with space [key, key] value",
-          "begin": "^(\\s*)\\[(?=[^\\]]*\\]\\s+[^=])",
+          "begin": "^\\s*\\[(?=[^\\]]*\\]\\s+[^=])",
           "end": "\\]",
           "beginCaptures": {
             "0": { "name": "punctuation.section.brackets.lacon" }
