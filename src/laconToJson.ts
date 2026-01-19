@@ -32,23 +32,34 @@ function laconToJsonInternal(text: string, currentDir: string, importStack: Set<
     const stack: any[] = [result];
     const indentStack: number[] = [-1];
     const variableRegistry: Record<string, string> = {};
+    let exportValue: any = undefined;
+    let hasExport = false;
     
-    const importRegex = /^@import\s+(?:"([^"]+)"|([^\s"{}|[\]]+))/;
+    const exportRegex = /^@export\s+(.+)$/;
 
     let isMultiline = false;
     let isRawMultiline = false; 
     let multilineKey = ''; 
     let multilineContent: string[] = [];
+    let isExportMultiline = false;
 
     let isArrayMode = false;
     let arrayKey = '';
     let arrayContent: any[] = [];
+    let isExportArray = false;
+
+    let isBlockMode = false;
+    let blockKey = '';
+    let isExportBlock = false;
 
     const varRegex = /^\s*(?<!\\)\$([\p{L}\d._-]+)\s*=?\s*(.+)$/u;
     const blockStartRegex = /^\s*([\p{L}\d._-]+)\s*(?:>\s*([\p{L}\d._-]+)\s*)?=?\s*\{\s*$/u;
     const multiKeyRegex = /^\s*\[([\p{L}\d\s,.*_-]+)\]\s*=?\s*(.+)$/u;
     const multilineStartRegex = /^\s*([\p{L}\d._-]+)\s*=?\s*(@?\()\s*$/u;
     const arrayStartRegex = /^\s*([\p{L}\d._-]+)\s*=?\s*\[\s*$/u;
+    const exportMultilineRegex = /^@export\s*=?\s*(@?\()\s*$/;
+    const exportArrayRegex = /^@export\s*=?\s*\[\s*$/;
+    const exportBlockRegex = /^@export\s*=?\s*\{\s*$/;
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
@@ -58,20 +69,59 @@ function laconToJsonInternal(text: string, currentDir: string, importStack: Set<
         if (!trimmed && !isMultiline) continue;
 
         if (!isMultiline && !isArrayMode && trimmed.startsWith('@import')) {
-            const match = trimmed.match(importRegex);
+            const currentScope = stack[stack.length - 1];
+            const resolvedImportLine = resolveVariables(trimmed, variableRegistry);
+            const match = resolvedImportLine.match(/^@import\s+(=)?\s*(?:"([^"]+)"|([^\s"{}|[\]]+))/);
+            
             if (match) {
-                const importPath = match[1] || match[2];
+                const importPath = match[2] || match[3];
                 const fullImportPath = path.resolve(currentDir, importPath);
                 const importedData = parseLaconFile(fullImportPath, importStack);
-                const currentScope = stack[stack.length - 1];
-                Object.assign(currentScope, importedData);
+                
+                if (isBlockMode) {
+                    const target = isExportBlock ? exportValue : (stack[stack.length - 1][blockKey] || {});
+                    Object.assign(target, importedData);
+                    if (!isExportBlock) stack[stack.length - 1][blockKey] = target;
+                } else {
+                    Object.assign(currentScope, importedData);
+                }
+                continue;
+            }
+        }
+
+        if (!isMultiline && !isArrayMode && !isBlockMode && trimmed.startsWith('@export')) {
+            if (exportBlockRegex.test(trimmed)) {
+                isExportBlock = true;
+                isBlockMode = true;
+                hasExport = true;
+                exportValue = {};
+                continue;
+            }
+            if (exportArrayRegex.test(trimmed)) {
+                isExportArray = true;
+                isArrayMode = true;
+                hasExport = true;
+                continue;
+            }
+            if (exportMultilineRegex.test(trimmed)) {
+                const match = trimmed.match(exportMultilineRegex)!;
+                isRawMultiline = match[1].startsWith('@');
+                isMultiline = true;
+                isExportMultiline = true;
+                hasExport = true;
+                continue;
+            }
+            const match = trimmed.match(exportRegex);
+            if (match) {
+                const value = match[1].trim();
+                exportValue = parseValue(resolveVariables(value, variableRegistry), variableRegistry, currentDir, importStack);
+                hasExport = true;
                 continue;
             }
         }
 
         if (isMultiline) {
             if (trimmed === ')') {
-                const currentScope = stack[stack.length - 1];
                 const finalRawValue = isRawMultiline 
                     ? processRawMultiline(multilineContent) 
                     : processQuotedMultiline(multilineContent);
@@ -79,10 +129,16 @@ function laconToJsonInternal(text: string, currentDir: string, importStack: Set<
                 let resolved = resolveVariables(finalRawValue, variableRegistry);
                 const processedValue = unescapeString(resolved);
 
-                if (typeof currentScope[multilineKey] === 'string' && currentScope[multilineKey] !== "") {
-                    currentScope[multilineKey] += '\n' + processedValue;
+                if (isExportMultiline) {
+                    exportValue = processedValue;
+                    isExportMultiline = false;
                 } else {
-                    currentScope[multilineKey] = processedValue;
+                    const currentScope = stack[stack.length - 1];
+                    if (typeof currentScope[multilineKey] === 'string' && currentScope[multilineKey] !== "") {
+                        currentScope[multilineKey] += '\n' + processedValue;
+                    } else {
+                        currentScope[multilineKey] = processedValue;
+                    }
                 }
                 
                 isMultiline = false;
@@ -93,17 +149,50 @@ function laconToJsonInternal(text: string, currentDir: string, importStack: Set<
             continue;
         }
 
+        if (isBlockMode) {
+            if (trimmed === '}') {
+                if (isExportBlock) {
+                    isExportBlock = false;
+                } else {
+                    const currentScope = stack[stack.length - 1];
+                    currentScope[blockKey] = exportValue || {};
+                }
+                isBlockMode = false;
+                exportValue = exportValue || {};
+                continue;
+            }
+            const cleanLine = trimmed.replace(/\/\/.*$/, '').trim();
+            if (!cleanLine) continue;
+            const target = isExportBlock ? exportValue : (stack[stack.length - 1][blockKey] || {});
+            parseInlinePairs(cleanLine, target, variableRegistry, true, currentDir, importStack);
+            if (!isExportBlock) {
+                stack[stack.length - 1][blockKey] = target;
+            }
+            continue;
+        }
+
         if (isArrayMode) {
             if (trimmed === ']') {
-                const currentScope = stack[stack.length - 1];
-                currentScope[arrayKey] = arrayContent;
+                if (isExportArray) {
+                    exportValue = arrayContent;
+                    isExportArray = false;
+                } else {
+                    const currentScope = stack[stack.length - 1];
+                    currentScope[arrayKey] = arrayContent;
+                }
                 isArrayMode = false;
                 arrayContent = [];
                 continue;
             }
             const cleanItem = trimmed.replace(/\/\/.*$/, '').replace(/,$/, '').trim();
             if (cleanItem) {
-                arrayContent.push(parseValue(resolveVariables(cleanItem, variableRegistry), variableRegistry, currentDir, importStack));
+                const parsed = parseValue(resolveVariables(cleanItem, variableRegistry), variableRegistry, currentDir, importStack);
+                if (parsed && typeof parsed === 'object' && parsed.__lacon_spread__) {
+                    if (Array.isArray(parsed.value)) arrayContent.push(...parsed.value);
+                    else arrayContent.push(parsed.value);
+                } else {
+                    arrayContent.push(parsed);
+                }
             }
             continue;
         }
@@ -194,31 +283,47 @@ function laconToJsonInternal(text: string, currentDir: string, importStack: Set<
         processComplexLine(cleanLine, currentScope, variableRegistry, currentDir, importStack);
     }
 
-    return result;
+    return hasExport ? exportValue : result;
 }
-
 
 function parseValue(val: string, vars: Record<string, string>, currentDir: string, importStack: Set<string>): any {
     val = val.trim();
+    if (!val) return val;
 
-    if (val.startsWith('@import=')) {
-        const rawPath = val.substring(8).trim();
+    const resolvedVal = resolveVariables(val, vars);
+
+    if (resolvedVal.startsWith('@import...')) {
+        const isAssignment = resolvedVal.includes('=');
+        const startPos = isAssignment ? resolvedVal.indexOf('=') + 1 : 10;
+        const rawPath = resolvedVal.substring(startPos).trim();
+        const importPath = unwrapQuotes(rawPath);
+        const fullImportPath = path.resolve(currentDir, importPath);
+        const imported = parseLaconFile(fullImportPath, importStack);
+        return { __lacon_spread__: true, value: imported };
+    }
+
+    if (resolvedVal.startsWith('@import')) {
+        const isAssignment = resolvedVal.includes('=');
+        const startPos = isAssignment ? resolvedVal.indexOf('=') + 1 : 7;
+        const rawPath = resolvedVal.substring(startPos).trim();
         const importPath = unwrapQuotes(rawPath);
         const fullImportPath = path.resolve(currentDir, importPath);
         return parseLaconFile(fullImportPath, importStack);
     }
 
-    if (val.startsWith('"') && val.endsWith('"')) return unescapeString(val.slice(1, -1));
-    if (val === 'true') return true;
-    if (val === 'false') return false;
-    if (val === 'auto') return 'auto';
+    if (resolvedVal.startsWith('"') && resolvedVal.endsWith('"')) return unescapeString(resolvedVal.slice(1, -1));
+    if (resolvedVal === 'true') return true;
+    if (resolvedVal === 'false') return false;
+    if (resolvedVal === 'auto') return 'auto';
 
-    if (val.startsWith('{') && val.endsWith('}')) {
-        const obj = {}; parseInlinePairs(val.slice(1, -1).trim(), obj, vars, false, currentDir, importStack); return obj;
+    if (resolvedVal.startsWith('{') && resolvedVal.endsWith('}')) {
+        const obj = {}; 
+        parseInlinePairs(resolvedVal.slice(1, -1).trim(), obj, vars, false, currentDir, importStack); 
+        return obj;
     }
     
-    if (val.startsWith('[') && val.endsWith(']')) {
-        const inner = val.slice(1, -1).trim();
+    if (resolvedVal.startsWith('[') && resolvedVal.endsWith(']')) {
+        const inner = resolvedVal.slice(1, -1).trim();
         if (!inner) return [];
         const items: string[] = []; let current = "", depth = 0, inQuotes = false;
         for (let i = 0; i < inner.length; i++) {
@@ -232,15 +337,37 @@ function parseValue(val: string, vars: Record<string, string>, currentDir: strin
             current += char;
         }
         items.push(current.trim());
-        return items.map(v => parseValue(v, vars, currentDir, importStack));
+        const results: any[] = [];
+        for (const item of items) {
+            const parsed = parseValue(item, vars, currentDir, importStack);
+            if (parsed && typeof parsed === 'object' && parsed.__lacon_spread__) {
+                const spreadValue = parsed.value;
+                if (Array.isArray(spreadValue)) results.push(...spreadValue);
+                else if (typeof spreadValue === 'object' && spreadValue !== null) results.push(...Object.values(spreadValue));
+                else results.push(spreadValue);
+            } else {
+                results.push(parsed);
+            }
+        }
+        return results;
     }
-    if (/^-?\d+(\.\d+)?$/.test(val)) return Number(val);
-    return unescapeString(val);
+    if (/^-?\d+(\.\d+)?$/.test(resolvedVal)) return Number(resolvedVal);
+    return unescapeString(resolvedVal);
 }
 
 function parseInlinePairs(text: string, target: any, vars: Record<string, string>, overwrite: boolean, currentDir: string, importStack: Set<string>) {
     const trimmedText = text.trim();
     if (!trimmedText) return;
+
+    if (trimmedText.startsWith('@import')) {
+        const imported = parseValue(trimmedText, vars, currentDir, importStack);
+        if (imported && typeof imported === 'object' && imported.__lacon_spread__) {
+            Object.assign(target, imported.value);
+        } else if (typeof imported === 'object' && imported !== null) {
+            Object.assign(target, imported);
+        }
+        return;
+    }
 
     if (trimmedText.endsWith('{}')) {
         const key = trimmedText.replace(/=?\s*\{\}/, '').trim();
@@ -253,35 +380,54 @@ function parseInlinePairs(text: string, target: any, vars: Record<string, string
 
     if (trimmedText.includes('=')) {
         const keyPositions: any[] = [];
-        const findKeysRegex = /(?:^|\s+)(?:([\p{L}\d._-]+)|\[([\p{L}\d\s,.*_-]+)\])\s*=/gu;
+        const findKeysRegex = /(?:^|\s+)([\p{L}\d._-]+|\[[\p{L}\d\s,.*_-]+\]|@import(?:\.\.\.)?)\s*=/gu;
         let m;
         while ((m = findKeysRegex.exec(trimmedText)) !== null) {
-            if (isBalanced(trimmedText.substring(0, m.index))) {
+            const potentialKey = m[1];
+            const keyStart = m.index + m[0].indexOf(potentialKey);
+            
+            if (isBalanced(trimmedText.substring(0, keyStart))) {
                 keyPositions.push({
-                    key: m[1] || m[2],
-                    start: m.index + (m[0].indexOf(m[1] || '[' + m[2])),
+                    key: potentialKey.replace(/^\[|\]$/g, ''),
+                    start: keyStart,
                     valueStart: m.index + m[0].length,
-                    isMulti: !!m[2]
+                    isMulti: potentialKey.startsWith('['),
+                    isImport: potentialKey.startsWith('@import')
                 });
             }
         }
+
         if (keyPositions.length > 0) {
             const firstKeyStart = keyPositions[0].start;
-            const leadText = trimmedText.substring(0, firstKeyStart).trim();
+            const prefix = trimmedText.substring(0, firstKeyStart).trim();
+            
             let currentTarget = target;
-            if (leadText) {
-                if (overwrite) { target[leadText] = {}; }
-                else { ensureObject(target, leadText); }
-                currentTarget = target[leadText];
+            if (prefix) {
+                ensureObject(target, prefix);
+                currentTarget = target[prefix];
             }
+
             for (let i = 0; i < keyPositions.length; i++) {
                 const cur = keyPositions[i];
                 const next = keyPositions[i + 1];
                 let rawVal = next ? trimmedText.substring(cur.valueStart, next.start) : trimmedText.substring(cur.valueStart);
-                if (cur.isMulti) {
-                    assignMultiValues(currentTarget, cur.key.split(',').map((k:any) => k.trim()), rawVal.trim(), vars, currentDir, importStack);
+                rawVal = rawVal.trim();
+                
+                if (cur.isImport) {
+                    const fullCmd = (cur.isMulti ? "[" + cur.key + "]" : cur.key) + "=" + rawVal;
+                    const imported = parseValue(fullCmd, vars, currentDir, importStack);
+                    if (imported?.__lacon_spread__) Object.assign(currentTarget, imported.value);
+                    else Object.assign(currentTarget, imported);
+                } else if (cur.isMulti) {
+                    assignMultiValues(currentTarget, cur.key.split(',').map((k:any) => k.trim()), rawVal, vars, currentDir, importStack);
                 } else {
-                    currentTarget[cur.key] = parseValue(resolveVariables(rawVal.trim(), vars), vars, currentDir, importStack);
+                    const parsed = parseValue(rawVal, vars, currentDir, importStack);
+                    if (parsed && typeof parsed === 'object' && parsed.__lacon_spread__) {
+                        if (typeof parsed.value === 'object' && !Array.isArray(parsed.value)) Object.assign(currentTarget, parsed.value);
+                        else currentTarget[cur.key] = parsed.value;
+                    } else {
+                        currentTarget[cur.key] = parsed;
+                    }
                 }
             }
             return;
@@ -294,8 +440,19 @@ function parseInlinePairs(text: string, target: any, vars: Record<string, string
         target[trimmedText] = true;
     } else {
         const key = trimmedText.substring(0, firstSpaceIndex);
-        const value = trimmedText.substring(firstSpaceIndex).trim();
-        target[key] = parseValue(resolveVariables(value, vars), vars, currentDir, importStack);
+        const remaining = trimmedText.substring(firstSpaceIndex).trim();
+
+        if (remaining.includes('=') && !remaining.startsWith('[') && !remaining.startsWith('"')) {
+            ensureObject(target, key);
+            parseInlinePairs(remaining, target[key], vars, overwrite, currentDir, importStack);
+        } else {
+            const parsed = parseValue(remaining, vars, currentDir, importStack);
+            if (parsed && typeof parsed === 'object' && parsed.__lacon_spread__) {
+                target[key] = parsed.value;
+            } else {
+                target[key] = parsed;
+            }
+        }
     }
 }
 
@@ -364,10 +521,12 @@ function ensureObject(parent: any, key: string) {
 }
 
 function appendValue(target: any, key: string, value: string, vars: Record<string, string>, currentDir: string, importStack: Set<string>) {
-    const resolved = resolveVariables(value, vars);
-    const parsed = parseValue(resolved, vars, currentDir, importStack);
+    const parsed = parseValue(value, vars, currentDir, importStack);
     if (!(key in target)) { target[key] = parsed; return; }
-    if (Array.isArray(target[key])) { target[key].push(parsed); } 
+    if (Array.isArray(target[key])) { 
+        if (parsed && parsed.__lacon_spread__ && Array.isArray(parsed.value)) target[key].push(...parsed.value);
+        else target[key].push(parsed); 
+    } 
     else if (typeof target[key] === 'string') {
         const cleanVal = typeof parsed === 'string' ? parsed : String(parsed);
         target[key] = target[key] === "" ? cleanVal : target[key] + '\n' + cleanVal;
@@ -375,8 +534,7 @@ function appendValue(target: any, key: string, value: string, vars: Record<strin
 }
 
 function assignMultiValues(target: any, keys: string[], rawValue: string, vars: Record<string, string>, currentDir: string, importStack: Set<string>) {
-    const resolved = resolveVariables(rawValue, vars);
-    const parsed = parseValue(resolved, vars, currentDir, importStack);
+    const parsed = parseValue(rawValue, vars, currentDir, importStack);
     let currentPrefix = "";
     const processedKeys = keys.map((k) => {
         let keyName = k.trim();
@@ -387,10 +545,13 @@ function assignMultiValues(target: any, keys: string[], rawValue: string, vars: 
         } else if (currentPrefix) { keyName = currentPrefix + keyName; }
         return keyName;
     });
-    if (Array.isArray(parsed) && parsed.length === processedKeys.length) {
-        processedKeys.forEach((k, idx) => { target[k] = parsed[idx]; });
+    
+    const actualValue = (parsed && parsed.__lacon_spread__) ? parsed.value : parsed;
+
+    if (Array.isArray(actualValue) && actualValue.length === processedKeys.length) {
+        processedKeys.forEach((k, idx) => { target[k] = actualValue[idx]; });
     } else {
-        processedKeys.forEach(k => { target[k] = parsed; });
+        processedKeys.forEach(k => { target[k] = actualValue; });
     }
 }
 
