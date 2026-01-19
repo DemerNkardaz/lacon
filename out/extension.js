@@ -27,7 +27,9 @@ async function activate(context) {
     const LANG_ID = 'lacon';
     const jsonProvider = new previewProvider_1.LaconJsonProvider();
     const variables = new Map();
-    let timeout = undefined;
+    let decorationTimeout = undefined;
+    let previewTimeout = undefined;
+    let lastText = "";
     const concealDecorationType = vscode.window.createTextEditorDecorationType({
         textDecoration: 'none; display: none;',
         cursor: 'pointer'
@@ -112,94 +114,110 @@ async function activate(context) {
     function isInEmbeddedLanguage(position, ranges) {
         return ranges.some(range => position >= range.start && position < range.end);
     }
-    function updateDecorations() {
+    function updateDecorations(onlyCursorMove = false) {
         const editor = vscode.window.activeTextEditor;
         if (!editor || editor.document.languageId !== LANG_ID)
             return;
         const text = editor.document.getText();
+        const embeddedRanges = getEmbeddedLanguageRanges(text);
+        if (!onlyCursorMove || text !== lastText) {
+            variables.clear();
+            const combinedRegex = /(?:\/\*\*([\s\S]*?)\*\/[\r\n\s]*)?^(?<!\\)\$([\p{L}_](?:[\p{L}0-9._-]*[\p{L}0-9_])?)(?:\s*=\s*|\s+)(.+)$/gum;
+            let match;
+            while ((match = combinedRegex.exec(text))) {
+                const rawDoc = match[1];
+                const varName = match[2];
+                const varValue = match[3].trim();
+                const line = editor.document.positionAt(match.index + (match[0].indexOf('$'))).line;
+                let cleanDoc = rawDoc ? rawDoc.split('\n').map(l => l.replace(/^\s*\* ?/, '').trim()).filter(l => l !== '').join('\n') : undefined;
+                variables.set(varName, { value: varValue, line: line, doc: cleanDoc });
+            }
+            lastText = text;
+        }
         const decorations = [];
         const selections = editor.selections;
         const activeLines = new Set(selections.map(s => s.active.line));
-        const embeddedRanges = getEmbeddedLanguageRanges(text);
-        variables.clear();
-        const combinedRegex = /(?:\/\*\*([\s\S]*?)\*\/[\r\n\s]*)?^(?<!\\)\$([\p{L}_](?:[\p{L}0-9._-]*[\p{L}0-9_])?)(?:\s*=\s*|\s+)(.+)$/gum;
-        let match;
-        while ((match = combinedRegex.exec(text))) {
-            const rawDoc = match[1];
-            const varName = match[2];
-            const varValue = match[3].trim();
-            const line = editor.document.positionAt(match.index + (match[0].indexOf('$'))).line;
-            let cleanDoc = rawDoc ? rawDoc.split('\n').map(l => l.replace(/^\s*\* ?/, '').trim()).filter(l => l !== '').join('\n') : undefined;
-            variables.set(varName, { value: varValue, line: line, doc: cleanDoc });
-        }
         const unicodeRegEx = /\\u\{([0-9a-fA-F]+)\}/g;
-        let m;
-        while ((m = unicodeRegEx.exec(text))) {
-            if (isInEmbeddedLanguage(m.index, embeddedRanges))
-                continue;
-            const startPos = editor.document.positionAt(m.index);
-            const range = new vscode.Range(startPos, editor.document.positionAt(m.index + m[0].length));
-            if (!activeLines.has(startPos.line)) {
-                try {
-                    const char = String.fromCodePoint(parseInt(m[1], 16));
-                    decorations.push({
-                        range: range,
-                        renderOptions: {
-                            after: {
-                                contentText: char,
-                                color: '#eae059',
-                                textDecoration: 'none; font-family: sans-serif; display: inline-block; text-align: center; border-radius: 3px; padding: 0 0.9em; line-height: 1.135em; vertical-align: middle;',
-                                backgroundColor: 'rgba(234, 224, 89, 0.15)',
-                                border: '1px solid #eae059',
-                                margin: '0 2px',
-                            }
-                        }
-                    });
-                }
-                catch { }
-            }
-        }
         const varUsageRegEx = /(?<!\\)\$([\p{L}_](?:[\p{L}0-9._-]*[\p{L}0-9_])?)(~?)/gum;
-        while ((m = varUsageRegEx.exec(text))) {
-            if (isInEmbeddedLanguage(m.index, embeddedRanges))
-                continue;
-            const varName = m[1];
-            const startPos = editor.document.positionAt(m.index);
-            const range = new vscode.Range(startPos, editor.document.positionAt(m.index + m[0].length));
-            const varInfo = variables.get(varName);
-            if (!activeLines.has(startPos.line) && varInfo && startPos.line > varInfo.line) {
-                const displayValue = replaceUnicodeSequences(varInfo.value);
-                const hasCJK = /[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/.test(displayValue);
-                decorations.push({
-                    range: range,
-                    renderOptions: {
-                        after: {
-                            contentText: displayValue,
-                            color: '#6a9fff',
-                            fontStyle: hasCJK ? 'normal' : 'italic',
-                            textDecoration: 'none; font-family: sans-serif; display: inline-block; text-align: center; border-radius: 3px; padding: 0 0.9em; line-height: 1.135em; vertical-align: middle;',
-                            backgroundColor: 'rgba(89, 147, 234, 0.15)',
-                            border: '1px solid #6a9fff',
-                            margin: '0 2px',
-                        }
+        for (const visibleRange of editor.visibleRanges) {
+            const startLine = Math.max(0, visibleRange.start.line - 5);
+            const endLine = Math.min(editor.document.lineCount - 1, visibleRange.end.line + 5);
+            for (let i = startLine; i <= endLine; i++) {
+                if (activeLines.has(i))
+                    continue;
+                const line = editor.document.lineAt(i);
+                const lineOffset = editor.document.offsetAt(line.range.start);
+                if (isInEmbeddedLanguage(lineOffset, embeddedRanges))
+                    continue;
+                let m;
+                unicodeRegEx.lastIndex = 0;
+                while ((m = unicodeRegEx.exec(line.text))) {
+                    const charRange = new vscode.Range(i, m.index, i, m.index + m[0].length);
+                    try {
+                        const char = String.fromCodePoint(parseInt(m[1], 16));
+                        decorations.push({
+                            range: charRange,
+                            renderOptions: {
+                                after: {
+                                    contentText: char,
+                                    color: '#eae059',
+                                    textDecoration: 'none; font-family: sans-serif; display: inline-block; text-align: center; border-radius: 3px; padding: 0 0.9em; line-height: 1.135em; vertical-align: middle;',
+                                    backgroundColor: 'rgba(234, 224, 89, 0.15)',
+                                    border: '1px solid #eae059',
+                                    margin: '0 2px',
+                                }
+                            }
+                        });
                     }
-                });
+                    catch { }
+                }
+                varUsageRegEx.lastIndex = 0;
+                while ((m = varUsageRegEx.exec(line.text))) {
+                    const varName = m[1];
+                    const varInfo = variables.get(varName);
+                    if (varInfo && i > varInfo.line) {
+                        const displayValue = replaceUnicodeSequences(varInfo.value);
+                        const hasCJK = /[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/.test(displayValue);
+                        decorations.push({
+                            range: new vscode.Range(i, m.index, i, m.index + m[0].length),
+                            renderOptions: {
+                                after: {
+                                    contentText: displayValue,
+                                    color: '#6a9fff',
+                                    fontStyle: hasCJK ? 'normal' : 'italic',
+                                    textDecoration: 'none; font-family: sans-serif; display: inline-block; text-align: center; border-radius: 3px; padding: 0 0.9em; line-height: 1.135em; vertical-align: middle;',
+                                    backgroundColor: 'rgba(89, 147, 234, 0.15)',
+                                    border: '1px solid #6a9fff',
+                                    margin: '0 2px',
+                                }
+                            }
+                        });
+                    }
+                }
             }
         }
         editor.setDecorations(concealDecorationType, decorations);
     }
-    function triggerUpdate(onlyCursorMove = false) {
-        if (timeout)
-            clearTimeout(timeout);
-        timeout = setTimeout(() => {
-            updateDecorations();
-            if (!onlyCursorMove) {
-                const editor = vscode.window.activeTextEditor;
-                if (editor && editor.document.languageId === LANG_ID) {
-                    jsonProvider.update(getVirtualUri(editor.document.uri));
-                }
+    function triggerPreviewUpdate() {
+        if (previewTimeout)
+            clearTimeout(previewTimeout);
+        previewTimeout = setTimeout(() => {
+            const editor = vscode.window.activeTextEditor;
+            if (editor && editor.document.languageId === LANG_ID) {
+                jsonProvider.update(getVirtualUri(editor.document.uri));
             }
-        }, 50);
+        }, 10);
+    }
+    function triggerUpdate(onlyCursorMove = false) {
+        if (decorationTimeout)
+            clearTimeout(decorationTimeout);
+        const delay = onlyCursorMove ? 10 : 100;
+        decorationTimeout = setTimeout(() => {
+            updateDecorations(onlyCursorMove);
+        }, delay);
+        if (!onlyCursorMove) {
+            triggerPreviewUpdate();
+        }
     }
     const hoverProvider = vscode.languages.registerHoverProvider({ language: LANG_ID, scheme: 'file' }, {
         provideHover(document, position) {
@@ -246,6 +264,9 @@ async function activate(context) {
         if (e.document.languageId === LANG_ID)
             triggerUpdate(false);
     }), vscode.window.onDidChangeTextEditorSelection(e => {
+        if (e.textEditor.document.languageId === LANG_ID)
+            triggerUpdate(true);
+    }), vscode.window.onDidChangeTextEditorVisibleRanges(e => {
         if (e.textEditor.document.languageId === LANG_ID)
             triggerUpdate(true);
     }));

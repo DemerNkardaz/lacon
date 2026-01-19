@@ -138,7 +138,7 @@ exports.laconToJson = laconToJson;
 function unescapeString(str) {
     if (!str)
         return str;
-    return str.replace(/\\(n|r|t|b|f|"|\\|\$|u\{([0-9A-Fa-f]+)\})/g, (match, type, unicodeCode) => {
+    return str.replace(/\\(n|r|t|b|f|"|\\|\$|~|u\{([0-9A-Fa-f]+)\})/g, (match, type, unicodeCode) => {
         if (type.startsWith('u{')) {
             const codePoint = parseInt(unicodeCode, 16);
             return String.fromCodePoint(codePoint);
@@ -152,6 +152,7 @@ function unescapeString(str) {
             case '"': return '"';
             case '\\': return '\\';
             case '$': return '$';
+            case '~': return '~';
             default: return match;
         }
     });
@@ -378,10 +379,12 @@ function processQuotedMultiline(lines) {
         .join('\n');
 }
 function resolveVariables(value, vars) {
+    if (!value)
+        return value;
     return value.replace(/(?<!\\)\$([\p{L}\d._-]+)(~?)/gu, (match, varName, tilde) => {
         const val = vars[varName] !== undefined ? vars[varName] : match;
-        return tilde ? val : val;
-    }).replace(/~/g, '');
+        return val;
+    });
 }
 function unwrapQuotes(val) {
     if (val.startsWith('"') && val.endsWith('"'))

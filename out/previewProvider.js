@@ -9,18 +9,24 @@ class LaconJsonProvider {
         this.onDidChange = this._onDidChange.event;
     }
     update(uri) {
-        this._onDidChange.fire(uri);
+        setImmediate(() => {
+            this._onDidChange.fire(uri);
+        });
     }
     provideTextDocumentContent(uri) {
         const sourceUri = vscode.Uri.parse(uri.query);
         const document = vscode.workspace.textDocuments.find(d => d.uri.toString() === sourceUri.toString());
-        if (!document)
-            return '{ "error": "Source document not found" }';
+        if (!document) {
+            return JSON.stringify({ error: "Source document not found" }, null, 2);
+        }
         try {
             return (0, laconToJson_1.laconToJson)(document.getText());
         }
         catch (e) {
-            return JSON.stringify({ error: "Parser error", details: String(e) }, null, 2);
+            return JSON.stringify({
+                error: "Parser error",
+                details: String(e)
+            }, null, 2);
         }
     }
 }
