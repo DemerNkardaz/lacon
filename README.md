@@ -30,9 +30,10 @@ Repository with lacon files examples: [[GitHub] LaCoN Examples](https://github.c
 
 ![LaCoN example with JSON preview](https://raw.githubusercontent.com/DemerNkardaz/lacon-vscode/refs/heads/master/image/README/1768793861942.png)
 
-[(AI generated test file)](https://github.com/DemerNkardaz/lacon-examples/blob/main/examples/ai-generated-var-test.lacon)
+LaCoN → JSON Preview | [(AI generated test file)](https://github.com/DemerNkardaz/lacon-examples/blob/main/examples/ai-generated-var-test.lacon)
 
 
+<br>
 <br>
 
 ```lacon
