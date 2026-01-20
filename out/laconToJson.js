@@ -45,6 +45,7 @@ function laconToJsonInternal(text, currentDir, importStack) {
     let isBlockMode = false;
     let blockKey = '';
     let isExportBlock = false;
+    let isCommentBlock = false;
     const varRegex = /^\s*(?<!\\)\$([\p{L}\d._-]+)\s*=?\s*(.+)$/u;
     const blockStartRegex = /^\s*([\p{L}\d._-]+)\s*(?:>\s*([\p{L}\d._-]+)\s*)?=?\s*\{\s*$/u;
     const multiKeyRegex = /^\s*\[([\p{L}\d\s,.*_-]+)\]\s*=?\s*(.+)$/u;
@@ -188,8 +189,18 @@ function laconToJsonInternal(text, currentDir, importStack) {
             }
             continue;
         }
+        if (!isMultiline && !isCommentBlock && trimmed.startsWith('/*')) {
+            if (!trimmed.endsWith('*/'))
+                isCommentBlock = true;
+            continue;
+        }
+        if (isCommentBlock) {
+            if (trimmed.includes('*/'))
+                isCommentBlock = false;
+            continue;
+        }
         const cleanLine = trimmed.replace(/\/\/.*$/, '').trim();
-        if (!cleanLine || cleanLine.startsWith('/*'))
+        if (!cleanLine)
             continue;
         const indentMatch = currentLine.match(/^(\s*)/);
         const currentIndent = indentMatch ? indentMatch[1].length : 0;
