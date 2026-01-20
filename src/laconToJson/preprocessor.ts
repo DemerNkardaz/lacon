@@ -56,11 +56,15 @@ export function preprocessLacon(text: string): string {
             const directive = parseEmitDirective(line);
             
             if (directive) {
-                // Проверяем, это блок или просто строка
-                // Блок - если после директивы есть { в restOfLine
-                const hasOpenBrace = directive.restOfLine.trim().endsWith('{');
+                // Получаем следующую строку для проверки
+                const nextLine = i + 1 < lines.length ? lines[i + 1] : undefined;
                 
-                if (hasOpenBrace) {
+                // Проверяем, это блок или просто строка
+                // Блок - если после директивы есть { в restOfLine или на следующей строке
+                const hasOpenBrace = directive.restOfLine.trim().endsWith('{');
+                const nextLineHasBrace = nextLine && nextLine.trim().endsWith('{');
+                
+                if (hasOpenBrace || nextLineHasBrace) {
                     // Это блок - раскрываем блок
                     const { expandedLines, endIndex } = expandEmitBlock(lines, i, globalVars);
                     result.push(...expandedLines);
@@ -68,9 +72,18 @@ export function preprocessLacon(text: string): string {
                 } else {
                     // Это просто строка
                     const indent = line.match(/^(\s*)/)?.[1] || '';
-                    const expanded = expandEmitDirective(line, globalVars, indent);
+                    const { lines: expanded, consumedNextLine } = expandEmitDirective(
+                        line,
+                        nextLine,
+                        globalVars,
+                        indent
+                    );
                     result.push(...expanded);
                     i++;
+                    // Если следующая строка была использована как ключ, пропускаем её
+                    if (consumedNextLine) {
+                        i++;
+                    }
                 }
             } else {
                 // Не смогли распарсить директиву, оставляем как есть

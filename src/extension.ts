@@ -135,7 +135,7 @@ export async function activate(context: vscode.ExtensionContext) {
             variables.clear();
             localVariables.clear();
             
-            // Сбор глобальных переменных
+            // 1. Сбор глобальных переменных
             const combinedRegex = /(?:\/\*\*([\s\S]*?)\*\/[\r\n\s]*)?^(?<!\\)\$([\p{L}_](?:[\p{L}0-9._-]*[\p{L}0-9_])?)(?:\s*=\s*|\s+)(.+)$/gum;
             let match;
             while ((match = combinedRegex.exec(text))) {
@@ -147,59 +147,53 @@ export async function activate(context: vscode.ExtensionContext) {
                 variables.set(varName, { value: varValue, line: line, doc: cleanDoc });
             }
             
-            // Сбор локальных переменных из <emit> директив и их дочерних элементов
+            // 2. Сбор локальных переменных
             const lines = text.split('\n');
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
                 if (line.includes('<emit:')) {
                     const directive = parseEmitDirective(line);
                     if (directive && directive.localVar) {
-                        // Вычисляем первое значение локальной переменной
+                        // Вычисляем первое значение
                         let firstValue: string;
                         if (!directive.localVarExpr || directive.localVarExpr.trim() === '@current') {
-                            // Форматируем в зависимости от isHex
-                            if (directive.isHex) {
-                                firstValue = directive.start.toString(16).toUpperCase().padStart(4, '0');
-                            } else {
-                                firstValue = directive.start.toString();
-                            }
+                            firstValue = directive.isHex 
+                                ? directive.start.toString(16).toUpperCase().padStart(4, '0')
+                                : directive.start.toString();
                         } else {
-                            // Выполняем выражение для первой итерации
                             const globalVarsObj: Record<string, string> = {};
-                            variables.forEach((info, name) => {
-                                globalVarsObj[name] = info.value;
-                            });
+                            variables.forEach((info, name) => { globalVarsObj[name] = info.value; });
                             firstValue = executeFunctionCall(directive.localVarExpr, globalVarsObj, directive.start) || directive.localVarExpr;
                         }
-                        
-                        // Находим все строки блока emit
-                        const baseIndent = line.match(/^(\s*)/)?.[1].length || 0;
+
+                        const registerLocal = (lineIdx: number) => {
+                            if (!localVariables.has(lineIdx)) localVariables.set(lineIdx, new Map());
+                            localVariables.get(lineIdx)!.set(directive.localVar!, firstValue);
+                        };
+
+                        // Помечаем саму строку с emit
+                        registerLocal(i);
+
+                        // Проверяем тело (блок или следующая строка)
                         const hasOpenBrace = directive.restOfLine.trim().endsWith('{');
-                        
-                        if (hasOpenBrace) {
-                            // Это блок - помечаем все дочерние строки до закрывающей скобки
-                            let j = i + 1;
+                        const nextLine = i + 1 < lines.length ? lines[i + 1] : undefined;
+                        const nextLineHasBrace = nextLine && nextLine.trim().endsWith('{');
+
+                        if (hasOpenBrace || nextLineHasBrace) {
+                            // Обработка блока {...}
+                            const baseIndent = line.match(/^(\s*)/)?.[1].length || 0;
+                            let j = i + (hasOpenBrace ? 1 : 2); // Если { на след. строке, контент начинается через одну
                             while (j < lines.length) {
                                 const childLine = lines[j];
                                 const childIndent = childLine.match(/^(\s*)/)?.[1].length || 0;
-                                
-                                if (childLine.trim() === '}' && childIndent === baseIndent) {
-                                    break;
-                                }
-                                
-                                // Создаём или обновляем map для этой строки
-                                if (!localVariables.has(j)) {
-                                    localVariables.set(j, new Map());
-                                }
-                                localVariables.get(j)!.set(directive.localVar, firstValue);
+                                if (childLine.trim() === '}' && childIndent <= baseIndent) break;
+                                registerLocal(j);
                                 j++;
                             }
+                        } else if (nextLine && nextLine.trim().length > 0) {
+                            // Одиночная следующая строка
+                            registerLocal(i + 1);
                         }
-                        
-                        // Помечаем саму строку с emit
-                        const lineVars = new Map<string, string>();
-                        lineVars.set(directive.localVar, firstValue);
-                        localVariables.set(i, lineVars);
                     }
                 }
             }
@@ -213,7 +207,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
         const unicodeRegEx = /\\u\{([0-9a-fA-F]+)\}/g;
         const varUsageRegEx = /(?<!\\)\$([\p{L}_](?:[\p{L}0-9._-]*[\p{L}0-9_])?)(~?)/gum;
-        const emitRegEx = /<emit:\s*(.+?)\s+to\s+([+-])(\d+)(?:\s+as\s+local\s+(\$[\w-]+)\s*=\s*(.+?))?>/g;
         const functionRegEx = /@f\(([^"]+),\s([^)]+)\)/g;
 
         for (const visibleRange of editor.visibleRanges) {
@@ -231,23 +224,20 @@ export async function activate(context: vscode.ExtensionContext) {
                 let m;
                 
                 // Декоратор для <emit>
-                const isEmitLine = line.text.includes('<emit:');
-                if (isEmitLine) {
+                if (line.text.includes('<emit:')) {
                     const directive = parseEmitDirective(line.text);
                     if (directive) {
-                        const count = directive.end - directive.start;
+                        const count = Math.abs(directive.end - directive.start);
                         let startStr, endStr;
-                        
                         if (directive.isHex) {
                             startStr = directive.start.toString(16).toUpperCase().padStart(4, '0');
-                            endStr = (directive.end - 1).toString(16).toUpperCase().padStart(4, '0');
+                            endStr = (directive.direction === '+' ? directive.end - 1 : directive.end + 1).toString(16).toUpperCase().padStart(4, '0');
                         } else {
                             startStr = directive.start.toString();
-                            endStr = (directive.end - 1).toString();
+                            endStr = (directive.direction === '+' ? directive.end - 1 : directive.end + 1).toString();
                         }
                         
-                        const label = `${count} ${l10n.t("emit.entries")} ${startStr}-${endStr}`;
-                        
+                        const label = `${count} ${l10n.t("emit.entries")} [ ${startStr}...${endStr} ]`;
                         const emitStart = line.text.indexOf('<emit:');
                         const emitEnd = line.text.indexOf('>', emitStart) + 1;
                         
@@ -255,7 +245,7 @@ export async function activate(context: vscode.ExtensionContext) {
                             range: new vscode.Range(i, emitStart, i, emitEnd),
                             renderOptions: {
                                 after: {
-																		contentText: label,
+                                    contentText: label,
                                     fontStyle: 'normal',
                                     color: '#ff57f4',
                                     textDecoration: 'none; font-family: sans-serif; display: inline-block; text-align: center; border-radius: 3px; padding: 0 0.9em; line-height: 1.135em; vertical-align: middle;',
@@ -268,15 +258,13 @@ export async function activate(context: vscode.ExtensionContext) {
                     }
                 }
                 
-                // Декоратор для @f функций (не внутри <emit>)
-                if (!isEmitLine) {
+                // Декоратор для @f функций
+                if (!line.text.includes('<emit:')) {
                     functionRegEx.lastIndex = 0;
                     while ((m = functionRegEx.exec(line.text))) {
                         try {
                             const globalVarsObj: Record<string, string> = {};
-                            variables.forEach((info, name) => {
-                                globalVarsObj[name] = info.value;
-                            });
+                            variables.forEach((info, name) => { globalVarsObj[name] = info.value; });
                             const result = executeFunctionCall(m[0], globalVarsObj);
                             
                             decorations.push({
@@ -300,11 +288,10 @@ export async function activate(context: vscode.ExtensionContext) {
                 // Декоратор для Unicode
                 unicodeRegEx.lastIndex = 0;
                 while ((m = unicodeRegEx.exec(line.text))) {
-                    const charRange = new vscode.Range(i, m.index, i, m.index + m[0].length);
                     try {
                         const char = String.fromCodePoint(parseInt(m[1], 16));
                         decorations.push({
-                            range: charRange,
+                            range: new vscode.Range(i, m.index, i, m.index + m[0].length),
                             renderOptions: {
                                 after: {
                                     contentText: char,
@@ -323,13 +310,10 @@ export async function activate(context: vscode.ExtensionContext) {
                 varUsageRegEx.lastIndex = 0;
                 while ((m = varUsageRegEx.exec(line.text))) {
                     const varName = m[1];
-                    
-                    // Проверяем, это локальная переменная?
                     const lineLocals = localVariables.get(i);
                     const isLocal = lineLocals && lineLocals.has(varName);
                     
                     if (isLocal) {
-                        // Локальная переменная - фиолетовый декоратор с значением
                         const localValue = lineLocals.get(varName) || '(local)';
                         decorations.push({
                             range: new vscode.Range(i, m.index, i, m.index + m[0].length),
@@ -346,12 +330,10 @@ export async function activate(context: vscode.ExtensionContext) {
                             }
                         });
                     } else {
-                        // Глобальная переменная - синий декоратор
                         const varInfo = variables.get(varName);
                         if (varInfo && i > varInfo.line) {
                             const displayValue = replaceUnicodeSequences(varInfo.value);
                             const hasCJK = /[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/.test(displayValue);
-
                             decorations.push({
                                 range: new vscode.Range(i, m.index, i, m.index + m[0].length),
                                 renderOptions: {
@@ -376,7 +358,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
     function triggerPreviewUpdate() {
         if (previewTimeout) clearTimeout(previewTimeout);
-        
         previewTimeout = setTimeout(() => {
             vscode.workspace.textDocuments.forEach(doc => {
                 if (doc.uri.scheme === LaconJsonProvider.scheme) {
@@ -389,14 +370,10 @@ export async function activate(context: vscode.ExtensionContext) {
     function triggerUpdate(onlyCursorMove: boolean = false) {
         if (decorationTimeout) clearTimeout(decorationTimeout);
         const delay = onlyCursorMove ? 10 : 100;
-
         decorationTimeout = setTimeout(() => {
             updateDecorations(onlyCursorMove);
         }, delay);
-
-        if (!onlyCursorMove) {
-            triggerPreviewUpdate();
-        }
+        if (!onlyCursorMove) triggerPreviewUpdate();
     }
 
     const hoverProvider = vscode.languages.registerHoverProvider(
@@ -411,7 +388,6 @@ export async function activate(context: vscode.ExtensionContext) {
                 const lineText = document.lineAt(position.line).text;
                 let m;
                 
-                // Hover для <emit>
                 if (lineText.includes('<emit:')) {
                     const directive = parseEmitDirective(lineText);
                     if (directive) {
@@ -422,54 +398,39 @@ export async function activate(context: vscode.ExtensionContext) {
                             const md = new vscode.MarkdownString();
                             md.isTrusted = true;
                             md.appendMarkdown(`${l10n.t("emit.title")}\n\n`);
-                            md.appendMarkdown(`| ${l10n.t("property")} | ${l10n.t("value")} |\n`);
-                            md.appendMarkdown(`| :--- | :--- |\n`);
+                            md.appendMarkdown(`| ${l10n.t("property")} | ${l10n.t("value")} |\n| :--- | :--- |\n`);
                             md.appendMarkdown(`| **${l10n.t("emit.start")}** | 0x${directive.start.toString(16).toUpperCase()} (${directive.start}) |\n`);
-                            md.appendMarkdown(`| **${l10n.t("emit.end")}** | 0x${(directive.end - 1).toString(16).toUpperCase()} (${directive.end - 1}) |\n`);
-                            md.appendMarkdown(`| **${l10n.t("emit.count")}** | ${directive.end - directive.start} ${l10n.t("emit.entries")} |\n`);
-                            md.appendMarkdown(`| **${l10n.t("emit.direction")}** | ${directive.direction === '+' ? `${l10n.t("increment")}` : `${l10n.t("decrement")}`} |\n`);
-                            if (directive.localVar) {
-                                md.appendMarkdown(`| **${l10n.t("emit.localVar")}** | \`$${directive.localVar}\` |\n`);
-                                if (directive.localVarExpr) {
-                                    md.appendMarkdown(`| **${l10n.t("emit.localVarExpr")}** | \`${directive.localVarExpr}\` |\n`);
-                                }
-                            }
+                            md.appendMarkdown(`| **${l10n.t("emit.end")}** | 0x${(directive.direction === '+' ? directive.end - 1 : directive.end + 1).toString(16).toUpperCase()} |\n`);
+                            md.appendMarkdown(`| **${l10n.t("emit.count")}** | ${Math.abs(directive.end - directive.start)} |\n`);
+                            if (directive.localVar) md.appendMarkdown(`| **${l10n.t("emit.localVar")}** | \`$${directive.localVar}\` |\n`);
                             return new vscode.Hover(md, range);
                         }
                     }
                 }
                 
-                // Hover для @f функций
-                const functionRegEx = /@f\(([^"]+),\s([^)]+)\)/g;
-                while ((m = functionRegEx.exec(lineText)) !== null) {
+                // Hover для функций
+                const funcRegex = /@f\(([^"]+),\s([^)]+)\)/g;
+                while ((m = funcRegex.exec(lineText)) !== null) {
                     const range = new vscode.Range(position.line, m.index, position.line, m.index + m[0].length);
                     if (range.contains(position)) {
                         const md = new vscode.MarkdownString();
                         md.isTrusted = true;
                         md.appendMarkdown(`### ${l10n.t("format.title")}\n\n`);
-                        md.appendMarkdown(`| ${l10n.t("property")} | ${l10n.t("value")} |\n`);
-                        md.appendMarkdown(`| :--- | :--- |\n`);
-                        md.appendMarkdown(`| **${l10n.t("format.format")}** | \`${m[1]}\` |\n`);
-                        md.appendMarkdown(`| **${l10n.t("format.value")}** | \`${m[2]}\` |\n`);
-                        
                         try {
                             const globalVarsObj: Record<string, string> = {};
-                            variables.forEach((info, name) => {
-                                globalVarsObj[name] = info.value;
-                            });
+                            variables.forEach((info, name) => { globalVarsObj[name] = info.value; });
                             const result = executeFunctionCall(m[0], globalVarsObj);
-                            md.appendMarkdown(`| **${l10n.t("format.result")}** | \`${result}\` |\n`);
+                            md.appendMarkdown(`**${l10n.t("format.result")}**: \`${result}\``);
                         } catch (e: any) {
-                            md.appendMarkdown(`| **${l10n.t("error")}** | ${e.message} |\n`);
+                            md.appendMarkdown(`**${l10n.t("error")}**: ${e.message}`);
                         }
-                        
                         return new vscode.Hover(md, range);
                     }
                 }
                 
                 // Hover для Unicode
-                const unicodeRegEx = /\\u\{([0-9a-fA-F]+)\}/g;
-                while ((m = unicodeRegEx.exec(lineText)) !== null) {
+                const uniRegex = /\\u\{([0-9a-fA-F]+)\}/g;
+                while ((m = uniRegex.exec(lineText)) !== null) {
                     const range = new vscode.Range(position.line, m.index, position.line, m.index + m[0].length);
                     if (range.contains(position)) {
                         return new vscode.Hover(getCharDetails(String.fromCodePoint(parseInt(m[1], 16)), m[1]), range);
@@ -477,30 +438,19 @@ export async function activate(context: vscode.ExtensionContext) {
                 }
 
                 // Hover для переменных
-                const varUsageRegEx = /\$([\p{L}_](?:[\p{L}0-9._-]*[\p{L}0-9_])?)(~?)/gum;
-                while ((m = varUsageRegEx.exec(lineText)) !== null) {
+                const varRegex = /\$([\p{L}_](?:[\p{L}0-9._-]*[\p{L}0-9_])?)(~?)/gum;
+                while ((m = varRegex.exec(lineText)) !== null) {
                     const range = new vscode.Range(position.line, m.index, position.line, m.index + m[0].length);
                     if (range.contains(position)) {
-                        // Проверяем локальную переменную
                         const lineLocals = localVariables.get(position.line);
                         if (lineLocals && lineLocals.has(m[1])) {
-                            const localValue = lineLocals.get(m[1]) || '';
+                            const val = lineLocals.get(m[1]) || '';
                             const md = new vscode.MarkdownString();
-                            md.isTrusted = true;
-                            md.appendMarkdown(`${l10n.t("var.local.title")}$${m[1]}\n\n`);
-                            md.appendMarkdown(`| ${l10n.t("property")} | ${l10n.t("value")} |\n`);
-                            md.appendMarkdown(`| :--- | :--- |\n`);
-                            md.appendMarkdown(`| **${l10n.t("type")}** | Local (emit) |\n`);
-                            md.appendMarkdown(`| **${l10n.t("var.current")}** | \`${localValue}\` |\n`);
-                            md.appendMarkdown(`\n${l10n.t("var.local.description")}\n`);
+                            md.appendMarkdown(`${l10n.t("var.local.title")}$${m[1]}\n\n**${l10n.t("var.current")}**: \`${val}\``);
                             return new vscode.Hover(md, range);
                         }
-                        
-                        // Глобальная переменная
                         const info = variables.get(m[1]);
-                        if (info && position.line > info.line) {
-                            return new vscode.Hover(getVarDetails(m[1], info), range);
-                        }
+                        if (info && position.line > info.line) return new vscode.Hover(getVarDetails(m[1], info), range);
                     }
                 }
                 return null;
@@ -511,31 +461,18 @@ export async function activate(context: vscode.ExtensionContext) {
     const toggleJsonCommand = vscode.commands.registerCommand('lacon.toggleJsonPreview', async () => {
         const editor = vscode.window.activeTextEditor;
         if (!editor || editor.document.languageId !== LANG_ID) return;
-
         const virtualUri = getVirtualUri(editor.document.uri);
         const doc = await vscode.workspace.openTextDocument(virtualUri);
-        await vscode.window.showTextDocument(doc, {
-            viewColumn: vscode.ViewColumn.Beside,
-            preserveFocus: true,
-            preview: true
-        });
+        await vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true, preview: true });
     });
 
     context.subscriptions.push(
         hoverProvider,
         toggleJsonCommand,
         vscode.window.onDidChangeActiveTextEditor(() => triggerUpdate()),
-        vscode.workspace.onDidChangeTextDocument(e => {
-            if (e.document.languageId === LANG_ID) {
-                triggerUpdate(false);
-            }
-        }),
-        vscode.window.onDidChangeTextEditorSelection(e => {
-            if (e.textEditor.document.languageId === LANG_ID) triggerUpdate(true);
-        }),
-        vscode.window.onDidChangeTextEditorVisibleRanges(e => {
-            if (e.textEditor.document.languageId === LANG_ID) triggerUpdate(true);
-        })
+        vscode.workspace.onDidChangeTextDocument(e => { if (e.document.languageId === LANG_ID) triggerUpdate(false); }),
+        vscode.window.onDidChangeTextEditorSelection(e => { if (e.textEditor.document.languageId === LANG_ID) triggerUpdate(true); }),
+        vscode.window.onDidChangeTextEditorVisibleRanges(e => { if (e.textEditor.document.languageId === LANG_ID) triggerUpdate(true); })
     );
 
     triggerUpdate();

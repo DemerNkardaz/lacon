@@ -18,12 +18,14 @@ export interface EmitDirective {
  * Парсит директиву <emit>
  * Формат: <emit: START to ±COUNT as local $var=выражение>остаток строки
  * Или: <emit: START to ±COUNT as local $var>остаток строки (без выражения = @current)
+ * Остаток строки может быть пустым (ключ на следующей строке)
  */
 export function parseEmitDirective(line: string): EmitDirective | null {
     // Удаляем \r и пробелы по краям для корректного парсинга
     const cleaned = line.trim().replace(/\r/g, '');
     
     // Регулярное выражение для <emit: num to ±num as local $var=expr> или <emit: num to ±num as local $var>
+    // restOfLine теперь может быть пустым
     const emitRegex = /<emit:\s*(.+?)\s+to\s+([+-])(\d+)(?:\s+as\s+local\s+(\$[\w-]+)(?:\s*=\s*(.+?))?)?>\s*(.*)$/;
     const match = cleaned.match(emitRegex);
 
@@ -73,12 +75,26 @@ function formatCurrentValue(value: number, isHex: boolean): string {
  */
 export function expandEmitDirective(
     line: string,
+    nextLine: string | undefined,
     globalVars: Record<string, string>,
     indentation: string
-): string[] {
+): { lines: string[], consumedNextLine: boolean } {
     const directive = parseEmitDirective(line);
     if (!directive) {
-        return [line];
+        return { lines: [line], consumedNextLine: false };
+    }
+
+    // Если restOfLine пустой, берём ключ из следующей строки
+    let keyTemplate = directive.restOfLine;
+    let consumedNextLine = false;
+    
+    if (!keyTemplate && nextLine !== undefined) {
+        const nextTrimmed = nextLine.trim();
+        // Проверяем, что следующая строка не пустая и не комментарий
+        if (nextTrimmed && !nextTrimmed.startsWith('//') && !nextTrimmed.startsWith('/*')) {
+            keyTemplate = nextTrimmed;
+            consumedNextLine = true;
+        }
     }
 
     const result: string[] = [];
@@ -108,8 +124,8 @@ export function expandEmitDirective(
             localVars[directive.localVar] = varValue;
         }
 
-        // Обрабатываем остаток строки, подставляя локальные переменные
-        let expandedLine = directive.restOfLine;
+        // Обрабатываем ключ, подставляя локальные переменные
+        let expandedLine = keyTemplate;
         
         // Подставляем переменные
         expandedLine = expandedLine.replace(/\$(\w[\w-]*)(~?)/g, (match, varName) => {
@@ -122,7 +138,7 @@ export function expandEmitDirective(
         result.push(indentation + expandedLine);
     }
 
-    return result;
+    return { lines: result, consumedNextLine };
 }
 
 /**
@@ -145,7 +161,20 @@ export function expandEmitBlock(
     const indentMatch = firstLine.match(/^(\s*)/);
     const baseIndent = indentMatch ? indentMatch[1].length : 0;
     
-    let endIndex = startIndex + 1;
+    let blockStartIndex = startIndex;
+    let keyTemplate = directive.restOfLine;
+    
+    // Если restOfLine пустой, ключ на следующей строке
+    if (!keyTemplate && startIndex + 1 < lines.length) {
+        const nextLine = lines[startIndex + 1];
+        const nextTrimmed = nextLine.trim();
+        if (nextTrimmed && !nextTrimmed.startsWith('//') && !nextTrimmed.startsWith('/*')) {
+            keyTemplate = nextTrimmed;
+            blockStartIndex = startIndex + 1;
+        }
+    }
+    
+    let endIndex = blockStartIndex + 1;
     const blockLines: string[] = [];
     
     // Собираем строки блока
@@ -191,7 +220,7 @@ export function expandEmitBlock(
         }
 
         // Обрабатываем заголовок блока
-        let blockHeader = directive.restOfLine;
+        let blockHeader = keyTemplate;
         blockHeader = blockHeader.replace(/\$(\w[\w-]*)(~?)/g, (match, varName) => {
             return localVars[varName] !== undefined ? localVars[varName] : match;
         });
