@@ -11,18 +11,20 @@ export interface EmitDirective {
     localVar?: string;
     localVarExpr?: string;
     restOfLine: string;
+    isHex: boolean; // Был ли START в hex формате
 }
 
 /**
  * Парсит директиву <emit>
  * Формат: <emit: START to ±COUNT as local $var=выражение>остаток строки
+ * Или: <emit: START to ±COUNT as local $var>остаток строки (без выражения = @current)
  */
 export function parseEmitDirective(line: string): EmitDirective | null {
     // Удаляем \r и пробелы по краям для корректного парсинга
     const cleaned = line.trim().replace(/\r/g, '');
     
-    // Регулярное выражение для <emit: num to ±num as local $var=expr>
-    const emitRegex = /<emit:\s*(.+?)\s+to\s+([+-])(\d+)(?:\s+as\s+local\s+(\$[\w-]+)\s*=\s*(.+?))?>\s*(.*)$/;
+    // Регулярное выражение для <emit: num to ±num as local $var=expr> или <emit: num to ±num as local $var>
+    const emitRegex = /<emit:\s*(.+?)\s+to\s+([+-])(\d+)(?:\s+as\s+local\s+(\$[\w-]+)(?:\s*=\s*(.+?))?)?>\s*(.*)$/;
     const match = cleaned.match(emitRegex);
 
     if (!match) {
@@ -32,8 +34,9 @@ export function parseEmitDirective(line: string): EmitDirective | null {
     const [, startStr, direction, countStr, localVar, localVarExpr, restOfLine] = match;
 
     // Парсим начальное значение (может быть 0x4E3 или обычное число)
+    const isHex = startStr.startsWith('0x') || startStr.startsWith('0X');
     let start: number;
-    if (startStr.startsWith('0x') || startStr.startsWith('0X')) {
+    if (isHex) {
         start = parseInt(startStr, 16);
     } else {
         start = parseInt(startStr, 10);
@@ -47,9 +50,22 @@ export function parseEmitDirective(line: string): EmitDirective | null {
         end,
         direction: direction as '+' | '-',
         localVar: localVar ? localVar.substring(1) : undefined, // Убираем $
-        localVarExpr,
-        restOfLine
+        localVarExpr: localVarExpr || (localVar ? '@current' : undefined), // Если нет выражения, используем @current
+        restOfLine,
+        isHex
     };
+}
+
+/**
+ * Форматирует текущее значение в зависимости от формата директивы
+ * Для hex возвращает только hex число без префикса (например, "04E3")
+ * Для decimal возвращает число (например, "1251")
+ */
+function formatCurrentValue(value: number, isHex: boolean): string {
+    if (isHex) {
+        return value.toString(16).toUpperCase().padStart(4, '0');
+    }
+    return value.toString();
 }
 
 /**
@@ -77,11 +93,18 @@ export function expandEmitDirective(
 
         // Если есть локальная переменная, вычисляем её значение
         if (directive.localVar && directive.localVarExpr) {
-            const varValue = processFunctionsInText(
-                directive.localVarExpr,
-                localVars,
-                currentValue
-            );
+            let varValue: string;
+            
+            // Если выражение - просто @current, используем форматированное значение
+            if (directive.localVarExpr.trim() === '@current') {
+                varValue = formatCurrentValue(currentValue, directive.isHex);
+            } else {
+                varValue = processFunctionsInText(
+                    directive.localVarExpr,
+                    localVars,
+                    currentValue
+                );
+            }
             localVars[directive.localVar] = varValue;
         }
 
@@ -152,11 +175,18 @@ export function expandEmitBlock(
 
         // Вычисляем локальную переменную
         if (directive.localVar && directive.localVarExpr) {
-            const varValue = processFunctionsInText(
-                directive.localVarExpr,
-                localVars,
-                currentValue
-            );
+            let varValue: string;
+            
+            // Если выражение - просто @current, используем форматированное значение
+            if (directive.localVarExpr.trim() === '@current') {
+                varValue = formatCurrentValue(currentValue, directive.isHex);
+            } else {
+                varValue = processFunctionsInText(
+                    directive.localVarExpr,
+                    localVars,
+                    currentValue
+                );
+            }
             localVars[directive.localVar] = varValue;
         }
 
