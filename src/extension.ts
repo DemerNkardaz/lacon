@@ -1,513 +1,174 @@
+/**
+ * Главный файл расширения LACON для VSCode
+ * Использует модульную архитектуру для декораторов и предпросмотра
+ */
+
 import * as vscode from 'vscode';
 import * as l10n from '@vscode/l10n';
-import { LaconJsonProvider } from './previewProvider';
-import { parseEmitDirective } from './laconToJson/emit-parser';
-import { parseFunctionCall, executeFunctionCall } from './laconToJson/function-parser';
+import { DecoratorManager } from './decorators';
+import { PreviewManager } from './preview';
 
-export async function activate(context: vscode.ExtensionContext) {
-    const locale = vscode.env.language;
-    const l10nDir = vscode.Uri.joinPath(context.extensionUri, 'l10n');
-    let l10nFile = vscode.Uri.joinPath(l10nDir, 'bundle.l10n.json');
+/**
+ * ID языка LACON
+ */
+const LANG_ID = 'lacon';
 
-    if (locale !== 'en') {
-        const specificFile = vscode.Uri.joinPath(l10nDir, `bundle.l10n.${locale}.json`);
-        try {
-            await vscode.workspace.fs.stat(specificFile);
-            l10nFile = specificFile;
-        } catch {
-            console.log(`Localization for "${locale}" not found, falling back to English.`);
-        }
-    }
-
-    try {
-        await l10n.config({ uri: l10nFile.toString() });
-    } catch (e) {
-        console.error("Critical error loading l10n:", e);
-    }
-
-    const LANG_ID = 'lacon';
-    const jsonProvider = new LaconJsonProvider();
-    const variables = new Map<string, { value: string, line: number, doc?: string }>();
-    const localVariables = new Map<number, Map<string, { value: string, emitLine: number }>>(); // line -> var map with emit source
-    
-    let decorationTimeout: NodeJS.Timeout | undefined = undefined;
-    let previewTimeout: NodeJS.Timeout | undefined = undefined;
-    let lastText = "";
-
-    const concealDecorationType = vscode.window.createTextEditorDecorationType({
-        textDecoration: 'none; display: none;',
-        cursor: 'pointer'
-    });
-
-    context.subscriptions.push(
-        vscode.workspace.registerTextDocumentContentProvider(LaconJsonProvider.scheme, jsonProvider)
-    );
-
-    function getVirtualUri(laconUri: vscode.Uri): vscode.Uri {
-        return vscode.Uri.parse(`${LaconJsonProvider.scheme}:Preview.json?${encodeURIComponent(laconUri.toString())}`);
-    }
-
-    function replaceUnicodeSequences(text: string): string {
-        return text.replace(/\\u\{([0-9a-fA-F]+)\}/g, (_, hex) => {
-            try {
-                return String.fromCodePoint(parseInt(hex, 16));
-            } catch {
-                return _;
-            }
-        });
-    }
-
-    function getCharTableMarkdown(char: string, hex: string): string {
-        const codePoint = char.codePointAt(0) || 0;
-        let category = "Unknown";
-        if (/\p{L}/u.test(char)) category = l10n.t("unicode.category.letter");
-        else if (/\p{N}/u.test(char)) category = l10n.t("unicode.category.number");
-        else if (/\p{P}/u.test(char)) category = l10n.t("unicode.category.punctuation");
-        else if (/\p{S}/u.test(char)) category = l10n.t("unicode.category.symbol");
-        else if (/\p{Z}/u.test(char)) category = l10n.t("unicode.category.separator");
-
-        let table = `| ${l10n.t("property")} | ${l10n.t("value")} |\n`;
-        table += `| :--- | :--- |\n`;
-        table += `| **${l10n.t("unicode.category")}** | ${category} |\n`;
-        table += `| **Dec** | ${codePoint} |\n`;
-        table += `| **UTF-16** | \`\\u${codePoint.toString(16).padStart(4, '0')}\` |\n`;
-        table += `| **HTML** | \`&#${codePoint};\` |\n`;
-        return table;
-    }
-
-    function getCharDetails(char: string, hex: string) {
-        const md = new vscode.MarkdownString();
-        md.isTrusted = true;
-        md.supportHtml = true;
-        md.appendMarkdown(`${l10n.t("unicode.preview.title")}: U+${hex.toUpperCase()}\n\n---\n\n`);
-        md.appendMarkdown(`# ${char}\n\n`);
-        md.appendMarkdown(getCharTableMarkdown(char, hex));
-        return md;
-    }
-
-    function getVarDetails(name: string, info: { value: string, line: number, doc?: string }) {
-        const md = new vscode.MarkdownString();
-        md.isTrusted = true;
-        md.supportHtml = true;
-        const displayValue = replaceUnicodeSequences(info.value);
-        md.appendMarkdown(`${l10n.t("var.title")}$${name}\n\n---\n\n`);
-        if (info.doc) md.appendMarkdown(`${info.doc}\n\n---\n\n`);
-        md.appendMarkdown(`| ${l10n.t("property")} | ${l10n.t("value")} |\n`);
-        md.appendMarkdown(`| :--- | :--- |\n`);
-        md.appendMarkdown(`| **${l10n.t("var.current")}** | \`${displayValue}\` |\n`);
-        md.appendMarkdown(`| **${l10n.t("var.defined")}** | ${l10n.t("var.line")} ${info.line + 1} |\n\n`);
-
-        const trimmedValue = info.value.replace(/^["']|["']$/g, '').trim();
-        const unicodeMatch = trimmedValue.match(/^\\u\{([0-9a-fA-F]+)\}$/);
-        if (unicodeMatch) {
-            const hex = unicodeMatch[1];
-            const char = String.fromCodePoint(parseInt(hex, 16));
-            md.appendMarkdown(`---\n\n`);
-            md.appendMarkdown(`${l10n.t("unicode.preview.title")}: U+${hex.toUpperCase()}\n\n`);
-            md.appendMarkdown(`# ${char}\n\n`);
-            md.appendMarkdown(getCharTableMarkdown(char, hex));
-        }
-        return md;
-    }
-
-    function getEmbeddedLanguageRanges(text: string): Array<{ start: number, end: number }> {
-        const ranges: Array<{ start: number, end: number }> = [];
-        const embeddedRegex = /\/\*\*\s*(json|javascript|js|typescript|ts|python|py|css|html|xml|yaml|yml|sql|markdown|md|regex|regexp|shell|bash|sh)\s*\n([\s\S]*?)\*\//gi;
-        let match;
-        while ((match = embeddedRegex.exec(text)) !== null) {
-            ranges.push({ start: match.index, end: match.index + match[0].length });
-        }
-        return ranges;
-    }
-
-    function isInEmbeddedLanguage(position: number, ranges: Array<{ start: number, end: number }>): boolean {
-        return ranges.some(range => position >= range.start && position < range.end);
-    }
-
-    function updateDecorations(onlyCursorMove: boolean = false) {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor || editor.document.languageId !== LANG_ID) return;
-
-        const text = editor.document.getText();
-        const embeddedRanges = getEmbeddedLanguageRanges(text);
-
-        if (!onlyCursorMove || text !== lastText) {
-            variables.clear();
-            localVariables.clear();
-            
-            // 1. Сбор глобальных переменных
-            const combinedRegex = /(?:\/\*\*([\s\S]*?)\*\/[\r\n\s]*)?^(?<!\\)\$([\p{L}_](?:[\p{L}0-9._-]*[\p{L}0-9_])?)(?:\s*=\s*|\s+)(.+)$/gum;
-            let match;
-            while ((match = combinedRegex.exec(text))) {
-                const rawDoc = match[1];
-                const varName = match[2];
-                const varValue = match[3].trim();
-                const line = editor.document.positionAt(match.index + (match[0].indexOf('$'))).line;
-                let cleanDoc = rawDoc ? rawDoc.split('\n').map(l => l.replace(/^\s*\* ?/, '').trim()).filter(l => l !== '').join('\n') : undefined;
-                variables.set(varName, { value: varValue, line: line, doc: cleanDoc });
-            }
-            
-            // 2. Сбор локальных переменных
-            const lines = text.split('\n');
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
-                if (line.includes('<emit:')) {
-                    const directive = parseEmitDirective(line);
-                    if (directive && directive.localVar) {
-                        // Вычисляем первое значение
-                        let firstValue: string;
-                        if (!directive.localVarExpr || directive.localVarExpr.trim() === '@current') {
-                            firstValue = directive.isHex 
-                                ? directive.start.toString(16).toUpperCase().padStart(4, '0')
-                                : directive.start.toString();
-                        } else {
-                            const globalVarsObj: Record<string, string> = {};
-                            variables.forEach((info, name) => { globalVarsObj[name] = info.value; });
-                            firstValue = executeFunctionCall(directive.localVarExpr, globalVarsObj, directive.start) || directive.localVarExpr;
-                        }
-
-                        const registerLocal = (lineIdx: number) => {
-                            if (!localVariables.has(lineIdx)) localVariables.set(lineIdx, new Map());
-                            localVariables.get(lineIdx)!.set(directive.localVar!, { value: firstValue, emitLine: i });
-                        };
-
-                        // Помечаем саму строку с emit
-                        registerLocal(i);
-
-                        // Проверяем тело (блок или следующая строка)
-                        const hasOpenBrace = directive.restOfLine.trim().endsWith('{');
-                        const nextLine = i + 1 < lines.length ? lines[i + 1] : undefined;
-                        const nextLineHasBrace = nextLine && nextLine.trim().endsWith('{');
-
-                        if (hasOpenBrace || nextLineHasBrace) {
-                            // Обработка блока {...}
-                            const baseIndent = line.match(/^(\s*)/)?.[1].length || 0;
-                            
-                            // Если ключ на следующей строке (restOfLine пустой и nextLineHasBrace)
-                            if (!directive.restOfLine.trim() && nextLineHasBrace) {
-                                registerLocal(i + 1); // Регистрируем строку с ключом и {
-                            }
-                            
-                            let j = i + (hasOpenBrace ? 1 : 2); // Если { на след. строке, контент начинается через одну
-                            while (j < lines.length) {
-                                const childLine = lines[j];
-                                const childIndent = childLine.match(/^(\s*)/)?.[1].length || 0;
-                                if (childLine.trim() === '}' && childIndent <= baseIndent) break;
-                                registerLocal(j);
-                                j++;
-                            }
-                        } else if (nextLine && nextLine.trim().length > 0) {
-                            // Одиночная следующая строка
-                            registerLocal(i + 1);
-                        }
-                    }
-                }
-            }
-            
-            lastText = text;
-        }
-
-        const decorations: vscode.DecorationOptions[] = [];
-        const selections = editor.selections;
-        const activeLines = new Set(selections.map(s => s.active.line));
-
-        const unicodeRegEx = /\\u\{([0-9a-fA-F]+)\}/g;
-        const varUsageRegEx = /(?<!\\)\$([\p{L}_](?:[\p{L}0-9._-]*[\p{L}0-9_])?)(~?)/gum;
-        const functionRegEx = /@f\(([^"]+),\s([^)]+)\)/g;
-
-        for (const visibleRange of editor.visibleRanges) {
-            const startLine = Math.max(0, visibleRange.start.line - 5);
-            const endLine = Math.min(editor.document.lineCount - 1, visibleRange.end.line + 5);
-
-            for (let i = startLine; i <= endLine; i++) {
-                if (activeLines.has(i)) continue;
-
-                const line = editor.document.lineAt(i);
-                const lineOffset = editor.document.offsetAt(line.range.start);
-                
-                if (isInEmbeddedLanguage(lineOffset, embeddedRanges)) continue;
-
-                let m;
-                
-                // Декоратор для <emit>
-                if (line.text.includes('<emit:')) {
-                    const directive = parseEmitDirective(line.text);
-                    if (directive) {
-                        const count = Math.abs(directive.end - directive.start);
-                        let startStr, endStr;
-                        if (directive.isHex) {
-                            startStr = directive.start.toString(16).toUpperCase().padStart(4, '0');
-                            endStr = (directive.direction === '+' ? directive.end - 1 : directive.end + 1).toString(16).toUpperCase().padStart(4, '0');
-                        } else {
-                            startStr = directive.start.toString();
-                            endStr = (directive.direction === '+' ? directive.end - 1 : directive.end + 1).toString();
-                        }
-                        
-                        const label = `${count} ${l10n.t("emit.entries")} [ ${startStr}...${endStr} ]`;
-                        const emitStart = line.text.indexOf('<emit:');
-                        const emitEnd = line.text.indexOf('>', emitStart) + 1;
-                        
-                        decorations.push({
-                            range: new vscode.Range(i, emitStart, i, emitEnd),
-                            renderOptions: {
-                                after: {
-                                    contentText: label,
-                                    fontStyle: 'normal',
-                                    color: '#ff57f4',
-                                    textDecoration: 'none; font-family: sans-serif; display: inline-block; text-align: center; border-radius: 3px; padding: 0 0.9em; line-height: 1.135em; vertical-align: middle;',
-                                    backgroundColor: 'rgba(255, 87, 244, 0.15)',
-                                    border: '1px solid #ff57f4',
-                                    margin: '0 2px',
-                                }
-                            }
-                        });
-                    }
-                }
-                
-                // Декоратор для @f функций
-                if (!line.text.includes('<emit:')) {
-                    functionRegEx.lastIndex = 0;
-                    while ((m = functionRegEx.exec(line.text))) {
-                        try {
-                            const globalVarsObj: Record<string, string> = {};
-                            variables.forEach((info, name) => { globalVarsObj[name] = info.value; });
-                            const result = executeFunctionCall(m[0], globalVarsObj);
-                            
-                            decorations.push({
-                                range: new vscode.Range(i, m.index, i, m.index + m[0].length),
-                                renderOptions: {
-                                    after: {
-                                        contentText: result,
-                                        color: '#ff57a3',
-                                        fontStyle: 'italic',
-                                        textDecoration: 'none; font-family: sans-serif; display: inline-block; text-align: center; border-radius: 3px; padding: 0 0.9em; line-height: 1.135em; vertical-align: middle;',
-                                        backgroundColor: 'rgba(255, 106, 153, 0.15)',
-                                        border: '1px solid #ff57a3',
-                                        margin: '0 2px',
-                                    }
-                                }
-                            });
-                        } catch {}
-                    }
-                }
-                
-                // Декоратор для Unicode
-                unicodeRegEx.lastIndex = 0;
-                while ((m = unicodeRegEx.exec(line.text))) {
-                    try {
-                        const char = String.fromCodePoint(parseInt(m[1], 16));
-                        decorations.push({
-                            range: new vscode.Range(i, m.index, i, m.index + m[0].length),
-                            renderOptions: {
-                                after: {
-                                    contentText: char,
-                                    color: '#eae059',
-                                    textDecoration: 'none; font-family: sans-serif; display: inline-block; text-align: center; border-radius: 3px; padding: 0 0.9em; line-height: 1.135em; vertical-align: middle;',
-                                    backgroundColor: 'rgba(234, 224, 89, 0.15)',
-                                    border: '1px solid #eae059',
-                                    margin: '0 2px',
-                                }
-                            }
-                        });
-                    } catch {}
-                }
-
-                // Декораторы для переменных
-                varUsageRegEx.lastIndex = 0;
-                while ((m = varUsageRegEx.exec(line.text))) {
-                    const varName = m[1];
-                    const lineLocals = localVariables.get(i);
-                    
-                    // Найти самую внутреннюю (ближайшую) локальную переменную
-                    let localVar: { value: string, emitLine: number } | undefined = undefined;
-                    if (lineLocals && lineLocals.has(varName)) {
-                        // Если есть несколько emit-блоков, определяющих эту переменную для данной строки,
-                        // берем тот, у которого emitLine максимален (самый внутренний блок)
-                        const entries = Array.from(lineLocals.entries());
-                        for (const [vName, vInfo] of entries) {
-                            if (vName === varName) {
-                                if (!localVar || vInfo.emitLine > localVar.emitLine) {
-                                    localVar = vInfo;
-                                }
-                            }
-                        }
-                    }
-                    
-                    if (localVar) {
-                        decorations.push({
-                            range: new vscode.Range(i, m.index, i, m.index + m[0].length),
-                            renderOptions: {
-                                after: {
-                                    contentText: localVar.value,
-                                    color: '#ff57f4',
-                                    fontStyle: 'italic',
-                                    textDecoration: 'none; font-family: sans-serif; display: inline-block; text-align: center; border-radius: 3px; padding: 0 0.9em; line-height: 1.135em; vertical-align: middle;',
-                                    backgroundColor: 'rgba(255, 87, 244, 0.15)',
-                                    border: '1px solid #ff57f4',
-                                    margin: '0 2px',
-                                }
-                            }
-                        });
-                    } else {
-                        const varInfo = variables.get(varName);
-                        if (varInfo && i > varInfo.line) {
-                            const displayValue = replaceUnicodeSequences(varInfo.value);
-                            const hasCJK = /[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/.test(displayValue);
-                            decorations.push({
-                                range: new vscode.Range(i, m.index, i, m.index + m[0].length),
-                                renderOptions: {
-                                    after: {
-                                        contentText: displayValue,
-                                        color: '#6a9fff',
-                                        fontStyle: hasCJK ? 'normal' : 'italic',
-                                        textDecoration: 'none; font-family: sans-serif; display: inline-block; text-align: center; border-radius: 3px; padding: 0 0.9em; line-height: 1.135em; vertical-align: middle;',
-                                        backgroundColor: 'rgba(89, 147, 234, 0.15)',
-                                        border: '1px solid #6a9fff',
-                                        margin: '0 2px',
-                                    }
-                                }
-                            });
-                        }
-                    }
-                }
-            }
-        }
-        editor.setDecorations(concealDecorationType, decorations);
-    }
-
-    function triggerPreviewUpdate() {
-        if (previewTimeout) clearTimeout(previewTimeout);
-        previewTimeout = setTimeout(() => {
-            vscode.workspace.textDocuments.forEach(doc => {
-                if (doc.uri.scheme === LaconJsonProvider.scheme) {
-                    jsonProvider.update(doc.uri);
-                }
-            });
-        }, 50);
-    }
-
-    function triggerUpdate(onlyCursorMove: boolean = false) {
-        if (decorationTimeout) clearTimeout(decorationTimeout);
-        const delay = onlyCursorMove ? 10 : 100;
-        decorationTimeout = setTimeout(() => {
-            updateDecorations(onlyCursorMove);
-        }, delay);
-        if (!onlyCursorMove) triggerPreviewUpdate();
-    }
-
-    const hoverProvider = vscode.languages.registerHoverProvider(
-        { language: LANG_ID, scheme: 'file' },
-        {
-            provideHover(document, position) {
-                const text = document.getText();
-                const offset = document.offsetAt(position);
-                const embeddedRanges = getEmbeddedLanguageRanges(text);
-                if (isInEmbeddedLanguage(offset, embeddedRanges)) return null;
-
-                const lineText = document.lineAt(position.line).text;
-                let m;
-                
-                if (lineText.includes('<emit:')) {
-                    const directive = parseEmitDirective(lineText);
-                    if (directive) {
-                        const emitStart = lineText.indexOf('<emit:');
-                        const emitEnd = lineText.indexOf('>', emitStart) + 1;
-                        const range = new vscode.Range(position.line, emitStart, position.line, emitEnd);
-                        if (range.contains(position)) {
-                            const md = new vscode.MarkdownString();
-                            md.isTrusted = true;
-                            md.appendMarkdown(`${l10n.t("emit.title")}\n\n`);
-                            md.appendMarkdown(`| ${l10n.t("property")} | ${l10n.t("value")} |\n| :--- | :--- |\n`);
-                            md.appendMarkdown(`| **${l10n.t("emit.start")}** | 0x${directive.start.toString(16).toUpperCase()} (${directive.start}) |\n`);
-                            md.appendMarkdown(`| **${l10n.t("emit.end")}** | 0x${(directive.direction === '+' ? directive.end - 1 : directive.end + 1).toString(16).toUpperCase()} |\n`);
-                            md.appendMarkdown(`| **${l10n.t("emit.count")}** | ${Math.abs(directive.end - directive.start)} |\n`);
-                            if (directive.localVar) md.appendMarkdown(`| **${l10n.t("emit.localVar")}** | \`$${directive.localVar}\` |\n`);
-                            return new vscode.Hover(md, range);
-                        }
-                    }
-                }
-                
-                // Hover для функций
-                const funcRegex = /@f\(([^"]+),\s([^)]+)\)/g;
-                while ((m = funcRegex.exec(lineText)) !== null) {
-                    const range = new vscode.Range(position.line, m.index, position.line, m.index + m[0].length);
-                    if (range.contains(position)) {
-                        const md = new vscode.MarkdownString();
-                        md.isTrusted = true;
-                        md.appendMarkdown(`### ${l10n.t("format.title")}\n\n`);
-                        try {
-                            const globalVarsObj: Record<string, string> = {};
-                            variables.forEach((info, name) => { globalVarsObj[name] = info.value; });
-                            const result = executeFunctionCall(m[0], globalVarsObj);
-                            md.appendMarkdown(`**${l10n.t("format.result")}**: \`${result}\``);
-                        } catch (e: any) {
-                            md.appendMarkdown(`**${l10n.t("error")}**: ${e.message}`);
-                        }
-                        return new vscode.Hover(md, range);
-                    }
-                }
-                
-                // Hover для Unicode
-                const uniRegex = /\\u\{([0-9a-fA-F]+)\}/g;
-                while ((m = uniRegex.exec(lineText)) !== null) {
-                    const range = new vscode.Range(position.line, m.index, position.line, m.index + m[0].length);
-                    if (range.contains(position)) {
-                        return new vscode.Hover(getCharDetails(String.fromCodePoint(parseInt(m[1], 16)), m[1]), range);
-                    }
-                }
-
-                // Hover для переменных
-                const varRegex = /\$([\p{L}_](?:[\p{L}0-9._-]*[\p{L}0-9_])?)(~?)/gum;
-                while ((m = varRegex.exec(lineText)) !== null) {
-                    const range = new vscode.Range(position.line, m.index, position.line, m.index + m[0].length);
-                    if (range.contains(position)) {
-                        const lineLocals = localVariables.get(position.line);
-                        
-                        // Найти самую внутреннюю локальную переменную
-                        let localVar: { value: string, emitLine: number } | undefined = undefined;
-                        if (lineLocals && lineLocals.has(m[1])) {
-                            const entries = Array.from(lineLocals.entries());
-                            for (const [vName, vInfo] of entries) {
-                                if (vName === m[1]) {
-                                    if (!localVar || vInfo.emitLine > localVar.emitLine) {
-                                        localVar = vInfo;
-                                    }
-                                }
-                            }
-                        }
-                        
-                        if (localVar) {
-                            const md = new vscode.MarkdownString();
-                            md.appendMarkdown(`${l10n.t("var.local.title")}$${m[1]}\n\n**${l10n.t("var.current")}**: \`${localVar.value}\``);
-                            return new vscode.Hover(md, range);
-                        }
-                        const info = variables.get(m[1]);
-                        if (info && position.line > info.line) return new vscode.Hover(getVarDetails(m[1], info), range);
-                    }
-                }
-                return null;
-            }
-        }
-    );
-
-    const toggleJsonCommand = vscode.commands.registerCommand('lacon.toggleJsonPreview', async () => {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor || editor.document.languageId !== LANG_ID) return;
-        const virtualUri = getVirtualUri(editor.document.uri);
-        const doc = await vscode.workspace.openTextDocument(virtualUri);
-        await vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true, preview: true });
-    });
-
-    context.subscriptions.push(
-        hoverProvider,
-        toggleJsonCommand,
-        vscode.window.onDidChangeActiveTextEditor(() => triggerUpdate()),
-        vscode.workspace.onDidChangeTextDocument(e => { if (e.document.languageId === LANG_ID) triggerUpdate(false); }),
-        vscode.window.onDidChangeTextEditorSelection(e => { if (e.textEditor.document.languageId === LANG_ID) triggerUpdate(true); }),
-        vscode.window.onDidChangeTextEditorVisibleRanges(e => { if (e.textEditor.document.languageId === LANG_ID) triggerUpdate(true); })
-    );
-
-    triggerUpdate();
+/**
+ * Таймауты для дебаунса обновлений
+ */
+interface UpdateTimers {
+	decorations?: NodeJS.Timeout;
+	preview?: NodeJS.Timeout;
 }
 
-export function deactivate() { }
+/**
+ * Инициализация локализации
+ */
+async function initializeLocalization(context: vscode.ExtensionContext): Promise<void> {
+	const locale = vscode.env.language;
+	const l10nDir = vscode.Uri.joinPath(context.extensionUri, 'l10n');
+	let l10nFile = vscode.Uri.joinPath(l10nDir, 'bundle.l10n.json');
+
+	if (locale !== 'en') {
+		const specificFile = vscode.Uri.joinPath(l10nDir, `bundle.l10n.${locale}.json`);
+		try {
+			await vscode.workspace.fs.stat(specificFile);
+			l10nFile = specificFile;
+		} catch {
+			console.log(`Localization for "${locale}" not found, falling back to English.`);
+		}
+	}
+
+	try {
+		await l10n.config({ uri: l10nFile.toString() });
+	} catch (e) {
+		console.error('Critical error loading l10n:', e);
+	}
+}
+
+/**
+ * Проверяет, является ли документ LACON файлом
+ */
+function isLaconDocument(document: vscode.TextDocument): boolean {
+	return document.languageId === LANG_ID;
+}
+
+/**
+ * Активация расширения
+ */
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
+	// Инициализация локализации
+	await initializeLocalization(context);
+
+	// Создание менеджеров
+	const decoratorManager = new DecoratorManager();
+	const previewManager = new PreviewManager();
+
+	// Регистрация провайдера предпросмотра
+	previewManager.register(context);
+
+	// Таймеры для дебаунса
+	const timers: UpdateTimers = {};
+
+	/**
+	 * Триггерит обновление декораторов с дебаунсом
+	 */
+	function triggerDecorationsUpdate(onlyCursorMove: boolean = false): void {
+		const editor = vscode.window.activeTextEditor;
+		if (!editor || !isLaconDocument(editor.document)) return;
+
+		if (timers.decorations) {
+			clearTimeout(timers.decorations);
+		}
+
+		// Оптимизированные задержки:
+		// - Движение курсора: 10мс (практически мгновенно)
+		// - Изменение текста: 100мс (баланс между отзывчивостью и производительностью)
+		const delay = onlyCursorMove ? 10 : 100;
+
+		timers.decorations = setTimeout(() => {
+			decoratorManager.updateDecorations(editor, onlyCursorMove);
+		}, delay);
+	}
+
+	/**
+	 * Триггерит обновление предпросмотра с дебаунсом
+	 */
+	function triggerPreviewUpdate(): void {
+		if (timers.preview) {
+			clearTimeout(timers.preview);
+		}
+
+		// Предпросмотр обновляется быстро (50мс) для хорошей отзывчивости
+		timers.preview = setTimeout(() => {
+			previewManager.triggerUpdate(0); // Внутри manager'а уже есть свой дебаунс
+		}, 50);
+	}
+
+	/**
+	 * Комплексное обновление декораторов и предпросмотра
+	 */
+	function triggerUpdate(onlyCursorMove: boolean = false): void {
+		triggerDecorationsUpdate(onlyCursorMove);
+		if (!onlyCursorMove) {
+			triggerPreviewUpdate();
+		}
+	}
+
+	// Регистрация hover провайдера
+	const hoverProvider = vscode.languages.registerHoverProvider(
+		{ language: LANG_ID, scheme: 'file' },
+		decoratorManager.createHoverProvider()
+	);
+
+	// Регистрация команды для переключения предпросмотра JSON
+	const toggleJsonCommand = vscode.commands.registerCommand('lacon.toggleJsonPreview', async () => {
+		await previewManager.togglePreview();
+	});
+
+	// Регистрация обработчиков событий
+	context.subscriptions.push(
+		hoverProvider,
+		toggleJsonCommand,
+		decoratorManager,
+		previewManager,
+
+		// Изменение активного редактора
+		vscode.window.onDidChangeActiveTextEditor((editor) => {
+			if (editor && isLaconDocument(editor.document)) {
+				triggerUpdate(false);
+			}
+		}),
+
+		// Изменение текста документа
+		vscode.workspace.onDidChangeTextDocument((e) => {
+			if (isLaconDocument(e.document)) {
+				triggerUpdate(false);
+			}
+		}),
+
+		// Изменение выделения (движение курсора)
+		vscode.window.onDidChangeTextEditorSelection((e) => {
+			if (isLaconDocument(e.textEditor.document)) {
+				triggerUpdate(true);
+			}
+		}),
+
+		// Изменение видимых диапазонов (прокрутка)
+		vscode.window.onDidChangeTextEditorVisibleRanges((e) => {
+			if (isLaconDocument(e.textEditor.document)) {
+				triggerUpdate(true);
+			}
+		})
+	);
+
+	// Начальное обновление
+	triggerUpdate(false);
+}
+
+/**
+ * Деактивация расширения
+ */
+export function deactivate(): void {
+	// Очистка выполняется автоматически через subscriptions
+}

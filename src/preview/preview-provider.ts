@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { laconToJson } from './laconToJson';
+import { laconToJson } from '../laconToJson';
 
 export class LaconJsonProvider implements vscode.TextDocumentContentProvider {
 	static scheme = 'lacon-json';
