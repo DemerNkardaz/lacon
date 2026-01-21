@@ -28,7 +28,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const LANG_ID = 'lacon';
     const jsonProvider = new LaconJsonProvider();
     const variables = new Map<string, { value: string, line: number, doc?: string }>();
-    const localVariables = new Map<number, Map<string, string>>(); // line -> var map
+    const localVariables = new Map<number, Map<string, { value: string, emitLine: number }>>(); // line -> var map with emit source
     
     let decorationTimeout: NodeJS.Timeout | undefined = undefined;
     let previewTimeout: NodeJS.Timeout | undefined = undefined;
@@ -168,7 +168,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
                         const registerLocal = (lineIdx: number) => {
                             if (!localVariables.has(lineIdx)) localVariables.set(lineIdx, new Map());
-                            localVariables.get(lineIdx)!.set(directive.localVar!, firstValue);
+                            localVariables.get(lineIdx)!.set(directive.localVar!, { value: firstValue, emitLine: i });
                         };
 
                         // Помечаем саму строку с emit
@@ -182,6 +182,12 @@ export async function activate(context: vscode.ExtensionContext) {
                         if (hasOpenBrace || nextLineHasBrace) {
                             // Обработка блока {...}
                             const baseIndent = line.match(/^(\s*)/)?.[1].length || 0;
+                            
+                            // Если ключ на следующей строке (restOfLine пустой и nextLineHasBrace)
+                            if (!directive.restOfLine.trim() && nextLineHasBrace) {
+                                registerLocal(i + 1); // Регистрируем строку с ключом и {
+                            }
+                            
                             let j = i + (hasOpenBrace ? 1 : 2); // Если { на след. строке, контент начинается через одну
                             while (j < lines.length) {
                                 const childLine = lines[j];
@@ -311,15 +317,28 @@ export async function activate(context: vscode.ExtensionContext) {
                 while ((m = varUsageRegEx.exec(line.text))) {
                     const varName = m[1];
                     const lineLocals = localVariables.get(i);
-                    const isLocal = lineLocals && lineLocals.has(varName);
                     
-                    if (isLocal) {
-                        const localValue = lineLocals.get(varName) || '(local)';
+                    // Найти самую внутреннюю (ближайшую) локальную переменную
+                    let localVar: { value: string, emitLine: number } | undefined = undefined;
+                    if (lineLocals && lineLocals.has(varName)) {
+                        // Если есть несколько emit-блоков, определяющих эту переменную для данной строки,
+                        // берем тот, у которого emitLine максимален (самый внутренний блок)
+                        const entries = Array.from(lineLocals.entries());
+                        for (const [vName, vInfo] of entries) {
+                            if (vName === varName) {
+                                if (!localVar || vInfo.emitLine > localVar.emitLine) {
+                                    localVar = vInfo;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (localVar) {
                         decorations.push({
                             range: new vscode.Range(i, m.index, i, m.index + m[0].length),
                             renderOptions: {
                                 after: {
-                                    contentText: localValue,
+                                    contentText: localVar.value,
                                     color: '#ff57f4',
                                     fontStyle: 'italic',
                                     textDecoration: 'none; font-family: sans-serif; display: inline-block; text-align: center; border-radius: 3px; padding: 0 0.9em; line-height: 1.135em; vertical-align: middle;',
@@ -443,10 +462,23 @@ export async function activate(context: vscode.ExtensionContext) {
                     const range = new vscode.Range(position.line, m.index, position.line, m.index + m[0].length);
                     if (range.contains(position)) {
                         const lineLocals = localVariables.get(position.line);
+                        
+                        // Найти самую внутреннюю локальную переменную
+                        let localVar: { value: string, emitLine: number } | undefined = undefined;
                         if (lineLocals && lineLocals.has(m[1])) {
-                            const val = lineLocals.get(m[1]) || '';
+                            const entries = Array.from(lineLocals.entries());
+                            for (const [vName, vInfo] of entries) {
+                                if (vName === m[1]) {
+                                    if (!localVar || vInfo.emitLine > localVar.emitLine) {
+                                        localVar = vInfo;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (localVar) {
                             const md = new vscode.MarkdownString();
-                            md.appendMarkdown(`${l10n.t("var.local.title")}$${m[1]}\n\n**${l10n.t("var.current")}**: \`${val}\``);
+                            md.appendMarkdown(`${l10n.t("var.local.title")}$${m[1]}\n\n**${l10n.t("var.current")}**: \`${localVar.value}\``);
                             return new vscode.Hover(md, range);
                         }
                         const info = variables.get(m[1]);
