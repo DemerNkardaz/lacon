@@ -14,19 +14,19 @@ import {
     exportMultilineRegex
 } from './regex';
 import { unescapeString, unwrapQuotes, ensureObject } from './utils';
-import { assignMultiValues } from './variable-parser';
+import { assignMultiValues } from './elements/variable-parser';
 import {
     handleMultilineEnd,
     handleBlockEnd,
     handleBlockLine,
     handleArrayEnd,
     handleArrayItem
-} from './block-parser';
-import { processComplexLine } from './inline-parser';
+} from './structures/block-parser';
+import { processComplexLine } from './structures/inline-parser';
 import {
     processImportDirective,
     processExportValue
-} from './import-parser';
+} from './elements/import-parser';
 
 /**
  * Создаёт начальное состояние парсера

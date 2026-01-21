@@ -3,7 +3,7 @@
  */
 
 import * as vscode from 'vscode';
-import { executeFunctionCall } from '../laconToJson/function-parser';
+import { executeFunctionCall } from '../laconToJson/elements/function-parser';
 import { createDecoratorStyle, createDecorationOptions, COLOR_SCHEMES } from './styles';
 import { DecoratorContext } from './types';
 import { isInEmbeddedLanguage } from './utils';

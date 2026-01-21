@@ -2,8 +2,8 @@
  * Обработка блочных конструкций (многострочные, массивы, объекты)
  */
 
-import { processRawMultiline, processQuotedMultiline, unescapeString } from './utils';
-import { resolveVariables } from './variable-parser';
+import { processRawMultiline, processQuotedMultiline, unescapeString } from '../utils';
+import { resolveVariables } from '../elements/variable-parser';
 
 /**
  * Обрабатывает завершение многострочного значения

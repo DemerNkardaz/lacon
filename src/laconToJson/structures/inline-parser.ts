@@ -2,9 +2,9 @@
  * Парсинг инлайн-пар ключ-значение
  */
 
-import { findKeysRegex } from './regex';
-import { ensureObject, isBalanced } from './utils';
-import { assignMultiValues } from './variable-parser';
+import { findKeysRegex } from '../regex';
+import { ensureObject, isBalanced } from '../utils';
+import { assignMultiValues } from '../elements/variable-parser';
 
 /**
  * Парсит инлайн-пары вида key=value или key value

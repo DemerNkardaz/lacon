@@ -2,7 +2,7 @@
  * Препроцессор LACON - обработка директив и функций перед парсингом
  */
 
-import { expandEmitDirective, expandEmitBlock, parseEmitDirective } from './emit-parser';
+import { expandEmitDirective, expandEmitBlock, parseEmitDirective } from './directives/emit-parser';
 import { unwrapQuotes } from './utils';
 
 /**

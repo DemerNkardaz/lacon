@@ -4,7 +4,7 @@
 
 import * as vscode from 'vscode';
 import * as l10n from '@vscode/l10n';
-import { parseEmitDirective } from '../laconToJson/emit-parser';
+import { parseEmitDirective } from '../laconToJson/directives/emit-parser';
 import { createDecoratorStyle, createDecorationOptions, COLOR_SCHEMES } from './styles';
 import { DecoratorContext } from './types';
 

@@ -4,8 +4,8 @@
 
 import * as vscode from 'vscode';
 import * as l10n from '@vscode/l10n';
-import { parseEmitDirective } from '../laconToJson/emit-parser';
-import { executeFunctionCall } from '../laconToJson/function-parser';
+import { parseEmitDirective } from '../laconToJson/directives/emit-parser';
+import { executeFunctionCall } from '../laconToJson/elements/function-parser';
 import { VariableStorage } from './types';
 import { getEmbeddedLanguageRanges, isInEmbeddedLanguage } from './utils';
 import { replaceUnicodeSequences, findInnermostLocalVariable } from './variables';

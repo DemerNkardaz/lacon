@@ -11,6 +11,7 @@
     { "include": "#multiline_strings" },
     { "include": "#arrays" }, 
     { "include": "#keywords_variable" },
+    { "include": "#keywords_constant" },
     { "include": "#keywords_special" },
     { "include": "#keywords_bool" },
     { "include": "#main_keys" },
@@ -54,6 +55,9 @@
             },
             {
               "include": "#keywords_variable"
+            },
+            {
+              "include": "#keywords_constant"
             },
             {
               "match": "[+-]",
@@ -257,6 +261,18 @@
         }
       ]
     },
+    "keywords_constant": {
+      "patterns": [
+        { 
+          "name": "entity.name.type.lacon", 
+          "match": "(?<!\\\\)\\#[\\p{L}_](?:[\\p{L}0-9._-]*[\\p{L}0-9_])?"
+        },
+        {
+          "name": "entity.name.type.class",
+          "match": "(?<=\\#[\\p{L}_](?:[\\p{L}0-9._-]*[\\p{L}0-9_])?)\\.\\.\\."
+        }
+      ]
+    },
     "keywords_special": {
       "patterns": [
         { "name": "support.type.lacon", "match": "\\b(none|auto)\\b" }
@@ -279,7 +295,7 @@
       "patterns": [
         {
           "name": "constant.numeric.lacon",
-          "match": "(?<![\\p{L}_])-?\\d+(\\.\\d+)?(mm|cm|pt|in|deg|em|rem|%|fr|rad|Hz|kHz|Kb|MB|GB|TB|s|ms|ch|ex|vw|vh|vmin|vmax|dpi|ppi|x|fps)\\b"
+          "match": "(?<![\\p{L}_])-?\\d+(\\.\\d+)?(µm|um|nm|mm|cm|m|km|Mm|ft|mi|pt|pc|in|deg|em|rem|%|fr|rad|Hz|kHz|MHz|GHz|THz|Kb|MB|GB|TB|nsec|µsec|sec|msec|min|hour|day|week|month|year|ch|ex|vw|vh|vmin|vmax|dpi|ppi|x|fps)\\b"
         }
       ]
     },
@@ -302,6 +318,7 @@
           "patterns": [
             { "include": "#unicode_escape" },
             { "include": "#keywords_variable" },
+            { "include": "#keywords_constant" },
             { "include": "#escapes" }
           ]
         }
@@ -320,6 +337,7 @@
           "patterns": [
             { "include": "#unicode_escape" },
             { "include": "#keywords_variable" },
+            { "include": "#keywords_constant" },
             { "name": "meta.embedded.lacon", "match": "[^)$]+" }
           ]
         },
@@ -332,6 +350,7 @@
             { "include": "#unicode_escape" },
             { "include": "#strings_quoted" },
             { "include": "#keywords_variable" },
+            { "include": "#keywords_constant" },
             { "name": "punctuation.separator.lacon", "match": "," }
           ]
         }

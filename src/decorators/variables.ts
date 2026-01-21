@@ -3,8 +3,8 @@
  */
 
 import * as vscode from 'vscode';
-import { parseEmitDirective } from '../laconToJson/emit-parser';
-import { executeFunctionCall } from '../laconToJson/function-parser';
+import { parseEmitDirective } from '../laconToJson/directives/emit-parser';
+import { executeFunctionCall } from '../laconToJson/elements/function-parser';
 import { VariableStorage, VariableInfo, LocalVariableInfo } from './types';
 
 /**

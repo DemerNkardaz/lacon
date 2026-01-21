@@ -4,10 +4,10 @@
 
 import * as path from 'path';
 import { laconToJsonInternal } from './core-parser';
-import { parseValue } from './value-parser';
-import { parseInlinePairs, processComplexLine } from './inline-parser';
-import { parseLaconFile as parseLaconFileImport } from './import-parser';
-import { resolveVariables, assignMultiValues } from './variable-parser';
+import { parseValue } from './elements/value-parser';
+import { parseInlinePairs, processComplexLine } from './structures/inline-parser';
+import { parseLaconFile as parseLaconFileImport } from './elements/import-parser';
+import { resolveVariables, assignMultiValues } from './elements/variable-parser';
 import { appendValue } from './utils';
 import { exportRegex } from './regex';
 import { preprocessLacon } from './preprocessor';

@@ -2,7 +2,7 @@
  * Обработка директив <emit> в LACON
  */
 
-import { processFunctionsInText } from './function-parser';
+import { processFunctionsInText } from '../elements/function-parser';
 
 export interface EmitDirective {
     start: number;

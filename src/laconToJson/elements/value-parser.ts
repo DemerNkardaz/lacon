@@ -3,8 +3,8 @@
  */
 
 import * as path from 'path';
-import { numberRegex } from './regex';
-import { unescapeString, unwrapQuotes } from './utils';
+import { numberRegex } from '../regex';
+import { unescapeString, unwrapQuotes } from '../utils';
 import { resolveVariables } from './variable-parser';
 
 /**
