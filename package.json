@@ -8,6 +8,11 @@
     "vscode": "^1.108.1"
   },
   "main": "./out/extension.js",
+	"scripts": {
+    "wasm-build": "wasm-pack build lacon_rust_parser --target nodejs --out-dir ../wasm-pkg",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
   "categories": [
     "Programming Languages"
   ],

@@ -231,7 +231,7 @@
             }
           ]
         },
-        { "name": "comment.line.double-slash.lacon", "match": "//.*$" },
+        { "name": "comment.line.double-slash.lacon", "match": "///.*$" },
         { "name": "comment.block.lacon", "begin": "/\\*", "end": "\\*/" }
       ]
     },
@@ -280,7 +280,7 @@
     },
     "keywords_bool": {
       "patterns": [
-        { "name": "constant.language.boolean.lacon", "match": "\\b(true|false|value)\\b" }
+        { "name": "constant.language.boolean.lacon", "match": "\\b(true|false|value|nil|undefined)\\b" }
       ]
     },
     "math_operators": {

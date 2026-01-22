@@ -7,6 +7,7 @@ import * as vscode from 'vscode';
 import * as l10n from '@vscode/l10n';
 import { DecoratorManager } from './decorators';
 import { PreviewManager } from './preview';
+import * as laconRustParser from '../wasm-pkg/lacon_rust_parser';
 
 /**
  * ID языка LACON

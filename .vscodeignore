@@ -10,3 +10,4 @@ src/
 **/*.ts
 out/**/*.map
 tsconfig.json
+lacon_rust_parser/
