@@ -6,6 +6,7 @@ use std::sync::LazyLock;
 pub static REGEX_STORE: LazyLock<HashMap<&'static str, Regex>> = LazyLock::new(|| {
     let mut map = HashMap::new();
 
+    map.insert("import", Regex::new(r"^@import\s+(.+)$").unwrap());
     map.insert(
         "format",
         Regex::new(r#"^@format\("([^"]*)",\s*(.+)\)$"#).unwrap(),

@@ -1,5 +1,7 @@
-pub mod interpretator;
-use crate::interpretator::*;
+pub mod ast;
+pub mod interpreter;
+pub mod lexer;
+// use crate::interpretator::*;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
