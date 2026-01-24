@@ -1,0 +1,395 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "LaCoN",
+  "patterns": [
+    { "include": "#emit_directive" },
+    { "include": "#unicode_escape" },
+    { "include": "#comments" },
+    { "include": "#escapes" },
+    { "include": "#multiple_keys" },
+    { "include": "#strings_quoted" },
+    { "include": "#multiline_strings" },
+    { "include": "#arrays" }, 
+    { "include": "#keywords_variable" },
+    { "include": "#keywords_constant" },
+    { "include": "#keywords_special" },
+    { "include": "#keywords_bool" },
+    { "include": "#main_keys" },
+    { "include": "#dict_pointer" },
+    { "include": "#numeric_units" },
+    { "include": "#numbers" },
+    { "include": "#hex_numbers" },
+    { "include": "#assignment_key" },
+    { "include": "#math_operators" },
+    { "include": "#unquoted_strings" },
+    { "include": "#operators" }
+  ],
+  "repository": {
+    "emit_directive": {
+      "patterns": [
+        {
+          "name": "meta.directive.emit.lacon",
+          "begin": "(<)(emit:)",
+          "beginCaptures": {
+            "1": { "name": "punctuation.section.brackets.lacon" },
+            "2": { "name": "support.class.lacon" }
+          },
+          "end": "(>)",
+          "endCaptures": {
+            "1": { "name": "punctuation.section.brackets.lacon" }
+          },
+          "patterns": [
+            {
+              "name": "keyword.control.lacon",
+              "match": "\\b(to|as)\\b"
+            },
+            {
+              "name": "variable.parameter.lacon",
+              "match": "\\blocal\\b"
+            },
+            {
+              "include": "#hex_numbers"
+            },
+            {
+              "include": "#numbers"
+            },
+            {
+              "include": "#keywords_variable"
+            },
+            {
+              "include": "#keywords_constant"
+            },
+            {
+              "match": "[+-]",
+              "name": "keyword.operator.lacon"
+            },
+            {
+              "match": "=",
+              "name": "keyword.operator.assignment.lacon"
+            }
+          ]
+        }
+      ]
+    },
+    "unicode_escape": {
+      "comment": "Высокий приоритет для корректной окраски \\u{...}",
+      "patterns": [
+        {
+          "name": "constant.character.escape.unicode.lacon",
+          "begin": "(\\\\u)(\\{)",
+          "beginCaptures": {
+            "1": { "name": "constant.character.escape.lacon" },
+            "2": { "name": "punctuation.section.brackets.lacon" }
+          },
+          "end": "\\}",
+          "endCaptures": {
+            "0": { "name": "punctuation.section.brackets.lacon" }
+          },
+          "patterns": [
+            {
+              "name": "constant.numeric.hex.lacon",
+              "match": "[0-9a-fA-F]+"
+            }
+          ]
+        }
+      ]
+    },
+    "arrays": {
+      "patterns": [
+        {
+          "name": "meta.structure.array.lacon",
+          "begin": "\\[",
+          "beginCaptures": {
+            "0": { "name": "punctuation.section.brackets.lacon" }
+          },
+          "end": "\\]",
+          "endCaptures": {
+            "0": { "name": "punctuation.section.brackets.lacon" }
+          },
+          "patterns": [
+            { "include": "#unicode_escape" },
+            { "include": "#comments" },
+            { "include": "#strings_quoted" },
+            { "include": "#keywords_variable" },
+            { "include": "#keywords_special" },
+            { "include": "#keywords_bool" },
+            { "include": "#numeric_units" },
+            { "include": "#numbers" },
+            { "include": "#math_operators" },
+            {
+              "name": "punctuation.separator.array.lacon",
+              "match": ","
+            },
+            {
+              "comment": "Элементы массива без кавычек",
+              "match": "([^\\s\\[\\]{}()=,//\"]+(?:\\\\.[^\\s\\[\\]{}()=,//\"]*)*)",
+              "captures": {
+                "1": {
+                  "name": "meta.embedded.lacon",
+                  "patterns": [
+                    { "include": "#unicode_escape" },
+                    { "include": "#escapes" }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "escapes": {
+      "patterns": [
+        {
+          "name": "constant.character.escape.lacon",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "main_keys": {
+      "patterns": [
+        {
+          "name": "entity.name.function.lacon",
+          "match": "^\\s*\\b([\\p{L}_][\\p{L}0-9_-]*)\\b(?=\\s|$|\\{|>|\\()"
+        }
+      ]
+    },
+    "multiple_keys": {
+      "patterns": [
+        {
+          "begin": "\\[(?=[^\\]]*\\]\\s*=)",
+          "end": "\\]",
+          "beginCaptures": {
+            "0": { "name": "punctuation.section.brackets.lacon" }
+          },
+          "endCaptures": {
+            "0": { "name": "punctuation.section.brackets.lacon" }
+          },
+          "patterns": [
+            {
+              "name": "entity.other.attribute-name.lacon",
+              "match": "[\\p{L}0-9_-]+"
+            },
+            {
+              "name": "punctuation.separator.lacon",
+              "match": ","
+            }
+          ]
+        },
+        {
+          "begin": "(?<!=)\\s*\\[(?=[^\\]]*\\]\\s+[^=,])",
+          "end": "\\]",
+          "beginCaptures": {
+            "0": { "name": "punctuation.section.brackets.lacon" }
+          },
+          "endCaptures": {
+            "0": { "name": "punctuation.section.brackets.lacon" }
+          },
+          "patterns": [
+            {
+              "name": "entity.name.function.lacon",
+              "match": "[\\p{L}0-9_-]+"
+            },
+            {
+              "name": "punctuation.separator.lacon",
+              "match": ","
+            }
+          ]
+        }
+      ]
+    },
+    "dict_pointer": {
+      "patterns": [
+        {
+          "name": "keyword.operator.navigation.lacon",
+          "match": ">"
+        },
+        {
+          "name": "entity.name.function.lacon",
+          "match": "(?<=>)\\s*\\b([\\p{L}0-9_-]+)\\b"
+        }
+      ]
+    },
+    "assignment_key": {
+        "patterns": [
+          {
+            "name": "entity.other.attribute-name.lacon",
+            "match": "\\b[\\p{L}0-9_-]+(?=\\s*=|\\s+\\[)"
+          }
+        ]
+    },
+    "comments": {
+      "patterns": [
+        { "include": "#comment_embedded" },
+        {
+          "name": "comment.block.documentation.lacon",
+          "begin": "/\\*\\*",
+          "end": "\\*/",
+          "patterns": [
+            {
+              "name": "storage.type.class.jsdoc.lacon",
+              "match": "@(param|returns?|type|description|example|author|version|since|todo)\\b"
+            }
+          ]
+        },
+        { "name": "comment.line.double-slash.lacon", "match": "///.*$" },
+        { "name": "comment.block.lacon", "begin": "/\\*", "end": "\\*/" }
+      ]
+    },
+    "comment_embedded": {
+      "patterns": [
+        {
+          "begin": "/\\*\\*\\s*(json|javascript|js|typescript|ts|python|py|css|html|xml|yaml|yml|sql|markdown|md|regex|regexp|shell|bash|sh)\\s*$",
+          "beginCaptures": { "1": { "name": "storage.type.class.jsdoc.lacon" } },
+          "end": "\\*/",
+          "contentName": "meta.embedded.block.$1"
+        }
+      ]
+    },
+    "keywords_variable": {
+      "patterns": [
+        { 
+          "name": "storage.type.lacon", 
+          "match": "(?<!\\\\)\\$[\\p{L}_](?:[\\p{L}0-9._-]*[\\p{L}0-9_])?"
+        },
+        { 
+          "name": "storage.type.lacon", 
+          "match": "(?<!\\\\)\\@[\\p{L}_](?:[\\p{L}0-9._-]*[\\p{L}0-9_])?"
+        },
+        {
+          "name": "entity.name.type.class",
+          "match": "(?<=\\@[\\p{L}_](?:[\\p{L}0-9._-]*[\\p{L}0-9_])?)\\.\\.\\."
+        }
+      ]
+    },
+    "keywords_constant": {
+      "patterns": [
+        { 
+          "name": "entity.name.type.lacon", 
+          "match": "(?<!\\\\)\\#[\\p{L}_](?:[\\p{L}0-9._-]*[\\p{L}0-9_])?"
+        },
+        {
+          "name": "entity.name.type.class",
+          "match": "(?<=\\#[\\p{L}_](?:[\\p{L}0-9._-]*[\\p{L}0-9_])?)\\.\\.\\."
+        }
+      ]
+    },
+    "keywords_special": {
+      "patterns": [
+        { "name": "support.type.lacon", "match": "\\b(none|auto)\\b" }
+      ]
+    },
+    "keywords_bool": {
+      "patterns": [
+        { "name": "constant.language.boolean.lacon", "match": "\\b(true|false|value|nil|undefined)\\b" }
+      ]
+    },
+    "math_operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.lacon",
+          "match": "(?<!\\p{L})(?:\\+|\\-|\\*|/|%|\\^|×|÷|⋅|−|±|√|∛|∜|∶)(?!\\p{L})"
+        }
+      ]
+    },
+    "numeric_units": {
+      "patterns": [
+        {
+          "name": "constant.numeric.lacon",
+          "match": "(?<![\\p{L}_])-?\\d+(\\.\\d+)?(µm|um|nm|mm|cm|m|km|Mm|ft|mi|pt|pc|in|deg|em|rem|%|fr|rad|Hz|kHz|MHz|GHz|THz|Kb|MB|GB|TB|nsec|µsec|sec|msec|min|hour|day|week|month|year|ch|ex|vw|vh|vmin|vmax|dpi|ppi|x|fps)\\b"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        { "name": "constant.numeric.lacon", "match": "\\b-?\\d+(\\.\\d+)?\\b" }
+      ]
+    },
+    "hex_numbers": {
+      "patterns": [
+        { "name": "constant.numeric.lacon", "match": "\\b0[xX][0-9a-fA-F]+\\b" }
+      ]
+    },
+    "strings_quoted": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.lacon",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            { "include": "#unicode_escape" },
+            { "include": "#keywords_variable" },
+            { "include": "#keywords_constant" },
+            { "include": "#escapes" }
+          ]
+        }
+      ]
+    },
+    "multiline_strings": {
+      "patterns": [
+        {
+          "begin": "(@)(\\()",
+          "beginCaptures": {
+            "1": { "name": "punctuation.section.brackets.lacon" },
+            "2": { "name": "punctuation.section.brackets.lacon" }
+          },
+          "end": "(\\))",
+          "endCaptures": { "1": { "name": "punctuation.section.brackets.lacon" } },
+          "patterns": [
+            { "include": "#unicode_escape" },
+            { "include": "#keywords_variable" },
+            { "include": "#keywords_constant" },
+            { "name": "meta.embedded.lacon", "match": "[^)$]+" }
+          ]
+        },
+        {
+          "begin": "(\\()",
+          "beginCaptures": { "1": { "name": "punctuation.section.brackets.lacon" } },
+          "end": "(\\))",
+          "endCaptures": { "1": { "name": "punctuation.section.brackets.lacon" } },
+          "patterns": [
+            { "include": "#unicode_escape" },
+            { "include": "#strings_quoted" },
+            { "include": "#keywords_variable" },
+            { "include": "#keywords_constant" },
+            { "name": "punctuation.separator.lacon", "match": "," }
+          ]
+        }
+      ]
+    },
+    "unquoted_strings": {
+      "patterns": [
+        {
+          "comment": "Value after =",
+          "match": "(?<==)\\s*([^\\s\\[\\]{}()=,//\\$]+(?:\\\\.[^\\s\\[\\]{}()=,//\\$]*)*)",
+          "captures": {
+            "1": {
+              "patterns": [
+                { "include": "#unicode_escape" },
+                { "include": "#escapes" }
+              ]
+            }
+          }
+        },
+        {
+          "comment": "Standalone values",
+          "match": "(?<=^|\\s)(?![a-zA-Z0-9_-]+=)([^\\s\\[\\]{}()=,//\"\\$]+(?:\\\\.[^\\s\\[\\]{}()=,//\"\\$]*)*)",
+          "captures": {
+            "1": {
+              "patterns": [
+                { "include": "#unicode_escape" },
+                { "include": "#escapes" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        { "name": "keyword.operator.assignment.lacon", "match": "=" },
+        { "name": "punctuation.section.brackets.lacon", "match": "[\\[\\]{}()]" }
+      ]
+    }
+  },
+  "scopeName": "source.lacon"
+}

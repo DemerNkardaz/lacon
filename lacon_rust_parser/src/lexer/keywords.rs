@@ -79,6 +79,8 @@ lazy_static! {
         m.insert("protected",  TokenType::Protected);
         m.insert("internal",   TokenType::Internal);
         m.insert("external",   TokenType::External);
+        m.insert("global",     TokenType::Global);
+        m.insert("local",      TokenType::Local);
         m.insert("static",     TokenType::Static);
         m.insert("virtual",    TokenType::Virtual);
         m.insert("abstract",   TokenType::Abstract);

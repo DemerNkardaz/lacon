@@ -186,6 +186,8 @@ pub enum TokenType {
     Protected, // protected \\ ProtectedAccess
     Internal,  // internal \\ ModuleAccess
     External,  // external \\ ExternalLinkage
+    Global,    // global \\ GlobalAccess
+    Local,     // local \\ LocalAccess
 
     Static,   // static \\ StaticMember
     Virtual,  // virtual \\ Overridable
