@@ -11,3 +11,7 @@ src/
 out/**/*.map
 tsconfig.json
 lacon_rust_parser/
+*.pdb
+*.exe
+
+lacon_rust_parser/examples

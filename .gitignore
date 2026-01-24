@@ -7,3 +7,5 @@ out
 /target
 *.pdb
 *.exe
+
+lacon_rust_parser/examples
