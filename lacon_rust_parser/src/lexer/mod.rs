@@ -1,6 +1,5 @@
 pub mod error;
 pub mod keywords;
-pub mod literals;
 pub mod operators;
 pub mod position;
 pub mod scanner;

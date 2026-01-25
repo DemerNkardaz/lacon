@@ -36,11 +36,14 @@ mod tests {
     #[test]
     fn test_lexer_to_file() {
         // Твой тестовый код
-        let source = r#"
+        let source2 = r#"
 // 1. Неоднозначность минуса: вычитание vs часть имени
 a - b      // Вычитание (Identifier, Operator, Identifier)
 a-b        // Единый идентификатор (Identifier)
 a -2       // Whitespace-присваивание отрицательного числа?
+a - 2       
+a b - 2       
+a b -2       
 
 // 2. Сложные отступы и пустые строки
 if true
@@ -65,6 +68,46 @@ Math.sqrt(2).to-string()
 
 // 5. Комментарии в неожиданных местах
 let x /* комментарий */ 10
+"#;
+        let source = r#"
+// 1. Смешанный режим: отступы + явные скобки
+container App
+    // Внутри App работают отступы
+    styles {
+        // Внутри скобок отступы могут плавать
+        width: 100%
+    padding: 20px
+          color: #fff
+    }
+
+    // Снова возвращаемся к строгим отступам
+    logic
+        if status == "active"
+            opacity -1.0
+        else
+            opacity 0
+
+// 2. Тест "слипшихся" отрицательных чисел и операторов
+calc-result = base-val -5 --2 + -10%
+// Ожидаем: [id(calc-result), eq, id(base-val), ws, num(-5), minus, num(-2), plus, num(-10%)]
+
+// 3. Многострочные строки и вызовы в цепочке
+text-data = """
+    Line 1
+    Line 2
+    """.trim().to-upper()
+
+// 4. Крайний случай индентации и пустых строк
+root
+    level1
+        
+        // Комментарий на пустой строке не должен прерывать блок
+        level2
+            target-node
+
+// 5. Ловушка для комментариев и операторов
+x = 10 / 2 /* деление */ + 5 // сумма
+y = (5 * 2)z // Whitespace-assign после скобок
 "#;
 
         let mut scanner = Scanner::new(source.to_string());

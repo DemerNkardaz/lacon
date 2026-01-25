@@ -68,25 +68,25 @@ pub fn match_operator(c1: char, c2: Option<char>, c3: Option<char>) -> OpMatch {
             },
             _ => simple(TokenType::Plus),
         },
-        '-' => {
-            match c2 {
-                Some('-') => OpMatch {
-                    token_type: TokenType::MinusMinus,
-                    consume_count: 1,
-                },
-                Some('=') => OpMatch {
-                    token_type: TokenType::MinusEqual,
-                    consume_count: 1,
-                },
-                Some('>') => OpMatch {
-                    token_type: TokenType::Arrow,
-                    consume_count: 1,
-                },
-                // Если за минусом идет буква, Scanner поглотит это как часть Identifier.
-                Some(c) if c.is_alphabetic() => simple(TokenType::Unknown),
-                _ => simple(TokenType::Minus),
-            }
-        }
+        '-' => match c2 {
+            Some('-') => OpMatch {
+                token_type: TokenType::MinusMinus,
+                consume_count: 1,
+            },
+            Some('=') => OpMatch {
+                token_type: TokenType::MinusEqual,
+                consume_count: 1,
+            },
+            Some('>') => OpMatch {
+                token_type: TokenType::Arrow,
+                consume_count: 1,
+            },
+            Some(c) if c.is_alphabetic() => simple(TokenType::Unknown),
+
+            Some(c) if c.is_digit(10) => simple(TokenType::Unknown),
+
+            _ => simple(TokenType::Minus),
+        },
         '*' => match c2 {
             Some('=') => OpMatch {
                 token_type: TokenType::StarEqual,

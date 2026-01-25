@@ -1,84 +1,127 @@
 TYPE                 | LEXEME          | LITERAL   
 --------------------------------------------------
 BOF                  |                 | None      
-Newline              | \n              | None      
-Newline              | \n              | None      
-Identifier           | a               | None      
-Minus                | -               | None      
-Identifier           | b               | None      
-Newline              | \n              | None      
-Identifier           | a-b             | None      
-Newline              | \n              | None      
-Identifier           | a               | None      
-Minus                | -               | None      
-Number               | 2               | 2         
-Newline              | \n              | None      
-Newline              | \n              | None      
-Newline              | \n              | None      
-If                   | if              | None      
-True                 | true            | None      
-Newline              | \n              | None      
-Newline              | \n              | None      
-Newline              | \n              | None      
-Newline              | \n              | None      
+Newline              |                 | None      
+Newline              |                 | None      
+Identifier           | container       | None      
+Whitespace           |                 | None      
+Identifier           | App             | None      
+Newline              |                 | None      
+Newline              |                 | None      
 Indent               |                 | None      
-Identifier           | sub-block       | None      
-Newline              | \n              | None      
-Newline              | \n              | None      
-Indent               |                 | None      
-Identifier           | target          | None      
-Newline              | \n              | None      
-Newline              | \n              | None      
-Newline              | \n              | None      
-Newline              | \n              | None      
-Newline              | \n              | None      
-Dedent               |                 | None      
-Dedent               |                 | None      
-Identifier           | key             | None      
-LeftParen            | (               | None      
-Identifier           | arg             | None      
-RightParen           | )               | None      
+Identifier           | styles          | None      
 Whitespace           |                 | None      
-Identifier           | value           | None      
-Newline              | \n              | None      
-Identifier           | list            | None      
-LeftBracket          | [               | None      
-Number               | 0               | 0         
-RightBracket         | ]               | None      
-Whitespace           |                 | None      
-Identifier           | item            | None      
-Newline              | \n              | None      
-String               | "string"        | string    
-Whitespace           |                 | None      
-Identifier           | property        | None      
-Newline              | \n              | None      
-Newline              | \n              | None      
-Newline              | \n              | None      
-Identifier           | Math            | None      
-Dot                  | .               | None      
-Identifier           | sqrt            | None      
-LeftParen            | (               | None      
-Number               | 2               | 2         
-RightParen           | )               | None      
-Dot                  | .               | None      
-Identifier           | to-string       | None      
-LeftParen            | (               | None      
-RightParen           | )               | None      
-Newline              | \n              | None      
-Number               | 1               | 1         
-DotDot               | ..              | None      
-Number               | 10              | 10        
-Newline              | \n              | None      
+LeftBrace            | {               | None      
+Newline              |                 | None      
+Newline              |                 | None      
+Identifier           | width           | None      
+Colon                | :               | None      
+UnitPercent          | 100%            | 100       
+Newline              |                 | None      
+Identifier           | padding         | None      
+Colon                | :               | None      
+Number               | 20              | 20        
+Identifier           | px              | None      
+Newline              |                 | None      
+Identifier           | color           | None      
+Colon                | :               | None      
 Hash                 | #               | None      
-Identifier           | abc             | None      
-Plus                 | +               | None      
-UnitPercent          | 10%             | 10        
-Newline              | \n              | None      
-Newline              | \n              | None      
-Newline              | \n              | None      
-Variable             | let             | None      
-Identifier           | x               | None      
+Identifier           | fff             | None      
+Newline              |                 | None      
+RightBrace           | }               | None      
+Newline              |                 | None      
+Newline              |                 | None      
+Newline              |                 | None      
+Identifier           | logic           | None      
+Newline              |                 | None      
+Indent               |                 | None      
+If                   | if              | None      
+Identifier           | status          | None      
+EqualEqual           | ==              | None      
+String               | "active"        | active    
+Newline              |                 | None      
+Indent               |                 | None      
+Identifier           | opacity         | None      
 Whitespace           |                 | None      
+Number               | -1.0            | -1.0      
+Newline              |                 | None      
+Dedent               |                 | None      
+Else                 | else            | None      
+Newline              |                 | None      
+Indent               |                 | None      
+Identifier           | opacity         | None      
+Whitespace           |                 | None      
+Number               | 0               | 0         
+Newline              |                 | None      
+Newline              |                 | None      
+Newline              |                 | None      
+Dedent               |                 | None      
+Dedent               |                 | None      
+Dedent               |                 | None      
+Identifier           | calc-result     | None      
+Equal                | =               | None      
+Identifier           | base-val        | None      
+Whitespace           |                 | None      
+Number               | -5              | -5        
+Whitespace           |                 | None      
+MinusMinus           | --              | None      
+Number               | 2               | 2         
+Plus                 | +               | None      
+UnitPercent          | -10%            | -10       
+Newline              |                 | None      
+Newline              |                 | None      
+Newline              |                 | None      
+Newline              |                 | None      
+Identifier           | text-data       | None      
+Equal                | =               | None      
+MultilineString      | """\n    Line 1\n    Line 2\n    """ | 
+    Line 1
+    Line 2
+    
+Dot                  | .               | None      
+Identifier           | trim            | None      
+LeftParen            | (               | None      
+RightParen           | )               | None      
+Dot                  | .               | None      
+Identifier           | to-upper        | None      
+LeftParen            | (               | None      
+RightParen           | )               | None      
+Newline              |                 | None      
+Newline              |                 | None      
+Newline              |                 | None      
+Identifier           | root            | None      
+Newline              |                 | None      
+Indent               |                 | None      
+Identifier           | level1          | None      
+Newline              |                 | None      
+Newline              |                 | None      
+Newline              |                 | None      
+Indent               |                 | None      
+Identifier           | level2          | None      
+Newline              |                 | None      
+Indent               |                 | None      
+Identifier           | target-node     | None      
+Newline              |                 | None      
+Newline              |                 | None      
+Newline              |                 | None      
+Dedent               |                 | None      
+Dedent               |                 | None      
+Dedent               |                 | None      
+Identifier           | x               | None      
+Equal                | =               | None      
 Number               | 10              | 10        
-Newline              | \n              | None      
+Slash                | /               | None      
+Number               | 2               | 2         
+Plus                 | +               | None      
+Number               | 5               | 5         
+Newline              |                 | None      
+Identifier           | y               | None      
+Equal                | =               | None      
+LeftParen            | (               | None      
+Number               | 5               | 5         
+Star                 | *               | None      
+Number               | 2               | 2         
+RightParen           | )               | None      
+Identifier           | z               | None      
+Newline              |                 | None      
 EOF                  |                 | None      
