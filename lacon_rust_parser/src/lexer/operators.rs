@@ -104,7 +104,7 @@ pub fn match_operator(c1: char, c2: Option<char>, c3: Option<char>) -> OpMatch {
                 consume_count: 1,
             },
             Some('/') => OpMatch {
-                token_type: TokenType::DoubleSlash,
+                token_type: TokenType::SlashSlash,
                 consume_count: 1,
             },
             Some('=') => OpMatch {
@@ -115,7 +115,7 @@ pub fn match_operator(c1: char, c2: Option<char>, c3: Option<char>) -> OpMatch {
         },
         '\\' => match c2 {
             Some('\\') => OpMatch {
-                token_type: TokenType::DoubleBackslash,
+                token_type: TokenType::BackslashBackslash,
                 consume_count: 1,
             },
             _ => simple(TokenType::Backslash),

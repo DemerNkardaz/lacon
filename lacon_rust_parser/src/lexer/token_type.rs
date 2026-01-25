@@ -3,31 +3,31 @@ pub enum TokenType {
     // ─────────────────────────────────────────────
     // Структурные символы / разделители
     // ─────────────────────────────────────────────
-    LeftParen,       // (  \\ GroupStart
-    RightParen,      // )  \\ GroupEnd
-    LeftBrace,       // {  \\ BlockStart
-    RightBrace,      // }  \\ BlockEnd
-    LeftBracket,     // [  \\ IndexStart
-    RightBracket,    // ]  \\ IndexEnd
-    Comma,           // ,  \\ Separator
-    Dot,             // .  \\ MemberAccess
-    DotDotDot,       // ... \\ Destructuring
-    Semicolon,       // ;  \\ StatementEnd
-    Colon,           // :  \\ TypeOrLabel
-    ColonColon,      // :: \\ TypeOrLabel
-    Backslash,       // \  \\
-    DoubleBackslash, // \\ \\
-    Question,        // ?  \\ Conditional / Nullable
+    LeftParen,          // (  \\ GroupStart
+    RightParen,         // )  \\ GroupEnd
+    LeftBrace,          // {  \\ BlockStart
+    RightBrace,         // }  \\ BlockEnd
+    LeftBracket,        // [  \\ IndexStart
+    RightBracket,       // ]  \\ IndexEnd
+    Comma,              // ,  \\ Separator
+    Dot,                // .  \\ MemberAccess
+    DotDotDot,          // ... \\ Destructuring
+    Semicolon,          // ;  \\ StatementEnd
+    Colon,              // :  \\ TypeOrLabel
+    ColonColon,         // :: \\ TypeOrLabel
+    Backslash,          // \  \\ Escape or Difference
+    BackslashBackslash, // \\ \\
+    Question,           // ?  \\ Conditional / Nullable
 
     // ─────────────────────────────────────────────
     // Арифметические операторы
     // ─────────────────────────────────────────────
-    Plus,        // +  \\ Add
-    Minus,       // -  \\ Subtract / Negate
-    Star,        // *  \\ Multiply
-    Slash,       // /  \\ Divide
-    DoubleSlash, // // \\ IntegerDivide
-    Percent,     // %  \\ Modulo
+    Plus,       // +  \\ Add
+    Minus,      // -  \\ Subtract / Negate
+    Star,       // *  \\ Multiply
+    Slash,      // /  \\ Divide
+    SlashSlash, // // \\ IntegerDivide
+    Percent,    // %  \\ Modulo
 
     // ─────────────────────────────────────────────
     // Инкременты и присваивания
