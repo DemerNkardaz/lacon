@@ -11,6 +11,7 @@ pub enum TokenType {
     RightBracket, // ]  \\ IndexEnd
     Comma,        // ,  \\ Separator
     Dot,          // .  \\ MemberAccess
+    DotDotDot,    // ... \\ Destructuring
     Semicolon,    // ;  \\ StatementEnd
     Colon,        // :  \\ TypeOrLabel
     ColonColon,   // :: \\ TypeOrLabel
@@ -38,6 +39,7 @@ pub enum TokenType {
     SlashEqual,   // /= \\ DivAssign
     PercentEqual, // %= \\ ModAssign
     DotEqual,     // .= \\ Append / ConcatAssign
+    DotDot,       // ..  \\ Range
 
     // ─────────────────────────────────────────────
     // Сравнение и равенство
@@ -152,11 +154,10 @@ pub enum TokenType {
     // ─────────────────────────────────────────────
     // Типовая система
     // ─────────────────────────────────────────────
-    Type,     // type \\ TypeDecl
-    Auto,     // auto \\ TypeInference
-    Alias,    // alias\\ TypeAlias
-    Generic,  // <T>  \\ GenericParam
-    Nullable, // ?    \\ NullableType
+    Type,    // type \\ TypeDecl
+    Auto,    // auto \\ TypeInference
+    Alias,   // alias\\ TypeAlias
+    Generic, // <T>  \\ GenericParam
 
     Undefined, // undefined \\ UndefinedValue
     None,      // none \\ NoneValue
@@ -233,5 +234,6 @@ pub enum TokenType {
     Error,   // \\ LexicalError
     Unknown, // \\ UnknownToken
     Invalid, // \\ InvalidToken
+    BOF,     // \\ BeginOfFile
     EOF,     // \\ EndOfFile
 }

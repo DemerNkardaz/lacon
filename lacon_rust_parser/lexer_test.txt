@@ -1,0 +1,84 @@
+TYPE                 | LEXEME          | LITERAL   
+--------------------------------------------------
+BOF                  |                 | None      
+Newline              | \n              | None      
+Newline              | \n              | None      
+Identifier           | a               | None      
+Minus                | -               | None      
+Identifier           | b               | None      
+Newline              | \n              | None      
+Identifier           | a-b             | None      
+Newline              | \n              | None      
+Identifier           | a               | None      
+Minus                | -               | None      
+Number               | 2               | 2         
+Newline              | \n              | None      
+Newline              | \n              | None      
+Newline              | \n              | None      
+If                   | if              | None      
+True                 | true            | None      
+Newline              | \n              | None      
+Newline              | \n              | None      
+Newline              | \n              | None      
+Newline              | \n              | None      
+Indent               |                 | None      
+Identifier           | sub-block       | None      
+Newline              | \n              | None      
+Newline              | \n              | None      
+Indent               |                 | None      
+Identifier           | target          | None      
+Newline              | \n              | None      
+Newline              | \n              | None      
+Newline              | \n              | None      
+Newline              | \n              | None      
+Newline              | \n              | None      
+Dedent               |                 | None      
+Dedent               |                 | None      
+Identifier           | key             | None      
+LeftParen            | (               | None      
+Identifier           | arg             | None      
+RightParen           | )               | None      
+Whitespace           |                 | None      
+Identifier           | value           | None      
+Newline              | \n              | None      
+Identifier           | list            | None      
+LeftBracket          | [               | None      
+Number               | 0               | 0         
+RightBracket         | ]               | None      
+Whitespace           |                 | None      
+Identifier           | item            | None      
+Newline              | \n              | None      
+String               | "string"        | string    
+Whitespace           |                 | None      
+Identifier           | property        | None      
+Newline              | \n              | None      
+Newline              | \n              | None      
+Newline              | \n              | None      
+Identifier           | Math            | None      
+Dot                  | .               | None      
+Identifier           | sqrt            | None      
+LeftParen            | (               | None      
+Number               | 2               | 2         
+RightParen           | )               | None      
+Dot                  | .               | None      
+Identifier           | to-string       | None      
+LeftParen            | (               | None      
+RightParen           | )               | None      
+Newline              | \n              | None      
+Number               | 1               | 1         
+DotDot               | ..              | None      
+Number               | 10              | 10        
+Newline              | \n              | None      
+Hash                 | #               | None      
+Identifier           | abc             | None      
+Plus                 | +               | None      
+UnitPercent          | 10%             | 10        
+Newline              | \n              | None      
+Newline              | \n              | None      
+Newline              | \n              | None      
+Variable             | let             | None      
+Identifier           | x               | None      
+Whitespace           |                 | None      
+Number               | 10              | 10        
+Newline              | \n              | None      
+EOF                  |                 | None      

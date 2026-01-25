@@ -7,7 +7,7 @@ pub struct OpMatch {
 }
 
 /// Функция сопоставляет символы с соответствующими типами токенов.
-/// Принимает текущий символ и два последующих для обработки длинных операторов (например, === или ///).
+/// Принимает текущий символ и два последующих для обработки длинных операторов.
 pub fn match_operator(c1: char, c2: Option<char>, c3: Option<char>) -> OpMatch {
     match c1 {
         // Односимвольные
@@ -19,7 +19,15 @@ pub fn match_operator(c1: char, c2: Option<char>, c3: Option<char>) -> OpMatch {
         ']' => simple(TokenType::RightBracket),
         ',' => simple(TokenType::Comma),
         ';' => simple(TokenType::Semicolon),
-        ':' => simple(TokenType::Colon),
+
+        // Двоеточие и Scope Resolution ::
+        ':' => match c2 {
+            Some(':') => OpMatch {
+                token_type: TokenType::ColonColon,
+                consume_count: 1,
+            },
+            _ => simple(TokenType::Colon),
+        },
 
         // Знаки вопроса
         '?' => match c2 {
@@ -62,28 +70,20 @@ pub fn match_operator(c1: char, c2: Option<char>, c3: Option<char>) -> OpMatch {
         },
         '-' => {
             match c2 {
-                // Оператор декремента --
                 Some('-') => OpMatch {
                     token_type: TokenType::MinusMinus,
                     consume_count: 1,
                 },
-                // Оператор присваивания -=
                 Some('=') => OpMatch {
                     token_type: TokenType::MinusEqual,
                     consume_count: 1,
                 },
-                // Тонкая стрелка ->
                 Some('>') => OpMatch {
                     token_type: TokenType::Arrow,
                     consume_count: 1,
                 },
-
-                // СТРАТЕГИЧЕСКОЕ ИЗМЕНЕНИЕ:
-                // Если за минусом идет буква, мы НЕ считаем это оператором здесь.
-                // Возвращаем Unknown, чтобы Scanner поглотил это как часть Identifier.
+                // Если за минусом идет буква, Scanner поглотит это как часть Identifier.
                 Some(c) if c.is_alphabetic() => simple(TokenType::Unknown),
-
-                // В остальных случаях (пробел, число, конец файла) — это минус
                 _ => simple(TokenType::Minus),
             }
         }
@@ -125,6 +125,7 @@ pub fn match_operator(c1: char, c2: Option<char>, c3: Option<char>) -> OpMatch {
             },
             _ => simple(TokenType::Percent),
         },
+
         // Сравнение и равенство
         '=' => match c2 {
             Some('=') => {
@@ -200,8 +201,16 @@ pub fn match_operator(c1: char, c2: Option<char>, c3: Option<char>) -> OpMatch {
             _ => simple(TokenType::Ampersand),
         },
 
-        // Точка (MemberAccess или Append)
+        // Точка, Эллипсис (...), Диапазон (..) или Append (.=)
         '.' => match c2 {
+            Some('.') if c3 == Some('.') => OpMatch {
+                token_type: TokenType::DotDotDot,
+                consume_count: 2,
+            },
+            Some('.') => OpMatch {
+                token_type: TokenType::DotDot,
+                consume_count: 1,
+            },
             Some('=') => OpMatch {
                 token_type: TokenType::DotEqual,
                 consume_count: 1,
