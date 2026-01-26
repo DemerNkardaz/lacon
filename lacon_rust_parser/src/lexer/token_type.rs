@@ -192,6 +192,7 @@ pub enum TokenType {
     Of,         // of   \\ Association
     Where,      // where \\ TypeConstraint
     When,       // when \\ ConditionalGuard
+    Contains,   // contains \\ CollectionContains
 
     // ─────────────────────────────────────────────
     // Контекст объекта

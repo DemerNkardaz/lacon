@@ -14,6 +14,7 @@
     { "include": "#access-modifiers" },
     { "include": "#control-flow" },
     { "include": "#operators" },
+    { "include": "#value-types" },
     { "include": "#constants" },
     { "include": "#attributes" },
     { "include": "#functions" },
@@ -190,12 +191,12 @@
       "patterns": [
         { "name": "keyword.control.import.lacon", "match": "(?<!\\.)\\b(import|export|from|include)\\b" },
         { "name": "keyword.control.conditional.lacon", "match": "(?<!\\.)\\b(if|else|elif|match|case|default|switch|when)\\b" },
-        { "name": "keyword.control.loop.lacon", "match": "(?<!\\.)\\b(for|while|loop|in|of)\\b" },
+        { "name": "keyword.control.loop.lacon", "match": "(?<!\\.)\\b(for|while|loop)\\b" },
         { "name": "keyword.control.directive.lacon", "match": "(?<!\\.)\\b(generate|spread|filter)\\b" },
         { "name": "keyword.control.flow.lacon", "match": "(?<!\\.)\\b(break|continue|return|yield|exit|cancel)\\b" },
         { "name": "keyword.control.exception.lacon", "match": "(?<!\\.)\\b(try|catch|finally|throw)\\b" },
         { "name": "keyword.control.async.lacon", "match": "(?<!\\.)\\b(await|async|coroutine|defer)\\b" },
-        { "name": "keyword.other.lacon", "match": "(?<!\\.)\\b(where|as|is|extends|implements)\\b" }
+        { "name": "keyword.operator.expression.lacon", "match": "(?<!\\.)\\b(contains|where|as|is|in|of|extends|implements)\\b" }
       ]
     },
     "storage-modifiers": {
@@ -225,14 +226,27 @@
     "constants": {
       "patterns": [
         { "name": "constant.language.boolean.lacon", "match": "\\b(true|false)\\b" },
-        { "name": "constant.language.null.lacon", "match": "\\b(nil|none|undefined)\\b" },
+        { "name": "constant.language.null.lacon", "match": "\\b(nil|undefined)\\b" },
+        { "name": "support.type.lacon", "match": "\\b(none)\\b" },
         { "name": "variable.language.lacon", "match": "\\b(this|super|here)\\b" },
         { "name": "variable.language.value.lacon", "match": "\\b(values?|v)\\b" },
         { "name": "variable.language.method.lacon", "match": "\\b(methods?)\\b" },
+        { "name": "variable.language.input.lacon", "match": "\\b(inputs?)\\b" },
+        { "name": "variable.language.output.lacon", "match": "\\b(outputs?)\\b" },
+        { "name": "variable.language.data.lacon", "match": "\\b(data)\\b" },
         { "name": "variable.language.each.lacon", "match": "\\b(each)\\b" },
         { "name": "variable.language.key.lacon", "match": "\\b(key|k)\\b" },
         { "name": "variable.language.index.lacon", "match": "\\b(index|indexes|indexOf|i|j)\\b" },
         { "name": "constant.other.placeholder.lacon", "match": "\\b_\\b" }
+      ]
+    },
+    "value-types": {
+      "patterns": [
+        { "name": "support.type.number.lacon", "match": "\\b(Number|Int|Float|Hex|Octal|Binary|Base32)\\b" },
+        { "name": "support.type.unit.lacon", "match": "\\b(Unit|Length|Time|Speed|Degree|Radian|Percent|Frequency|Fraction|Dimension|Temperature|Pressure|Volume|Energy|Size|Weight)\\b" },
+        { "name": "support.type.unit.electric.lacon", "match": "\\b(Electric)*(Power|Current|Voltage|Charge|Resistance|Conductance|Capacitance)\\b" },
+        { "name": "support.type.object.lacon", "match": "\\b(Object|Array|Dictionary|Table|Function|Procedure)\\b" },
+        { "name": "support.type.other.lacon", "match": "\\b(Any|String)\\b" }
       ]
     },
     "attributes": {

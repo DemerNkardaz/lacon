@@ -73,6 +73,7 @@ lazy_static! {
         m.insert("of",         TokenType::Of);
         m.insert("where",      TokenType::Where);
         m.insert("when",       TokenType::When);
+        m.insert("contains",   TokenType::Contains);
 
         // --- Литералы-константы ---
         m.insert("true",       TokenType::True);
