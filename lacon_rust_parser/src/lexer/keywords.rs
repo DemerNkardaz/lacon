@@ -17,6 +17,8 @@ lazy_static! {
         m.insert("switch",     TokenType::Switch);
         m.insert("for",        TokenType::For);
         m.insert("while",      TokenType::While);
+        m.insert("spread",      TokenType::Spread);
+        m.insert("generate",      TokenType::Generate);
         m.insert("loop",       TokenType::Loop);
         m.insert("break",      TokenType::Break);
         m.insert("continue",   TokenType::Continue);
@@ -72,6 +74,7 @@ lazy_static! {
         m.insert("undefined",  TokenType::Undefined);
         m.insert("this",       TokenType::This);
         m.insert("super",      TokenType::Super);
+        m.insert("here",       TokenType::Here);
 
         // --- Модификаторы доступа и ООП ---
         m.insert("public",     TokenType::Public);

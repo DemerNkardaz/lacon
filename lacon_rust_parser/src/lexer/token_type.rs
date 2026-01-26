@@ -11,6 +11,7 @@ pub enum TokenType {
     RightBracket,       // ]  \\ IndexEnd
     Comma,              // ,  \\ Separator
     Dot,                // .  \\ MemberAccess
+    DotDot,             // ..  \\ Range
     DotDotDot,          // ... \\ Destructuring
     Semicolon,          // ;  \\ StatementEnd
     Colon,              // :  \\ TypeOrLabel
@@ -18,6 +19,7 @@ pub enum TokenType {
     Backslash,          // \  \\ Escape or Difference
     BackslashBackslash, // \\ \\
     Question,           // ?  \\ Conditional / Nullable
+    DollarLeftBrace,    // ${ \\ InterpolationStart
 
     // ─────────────────────────────────────────────
     // Арифметические операторы
@@ -42,7 +44,6 @@ pub enum TokenType {
     SlashEqual,   // /= \\ DivAssign
     PercentEqual, // %= \\ ModAssign
     DotEqual,     // .= \\ Append / ConcatAssign
-    DotDot,       // ..  \\ Range
 
     // ─────────────────────────────────────────────
     // Сравнение и равенство
@@ -90,11 +91,13 @@ pub enum TokenType {
     // ─────────────────────────────────────────────
     // Литералы и идентификаторы
     // ─────────────────────────────────────────────
-    Identifier,      // name \\ Identifier
-    Number,          // 123  \\ NumericLiteral
-    String,          // " "  \\ StringLiteral
-    MultilineString, // """ \\ MultilineStringLiteral
-    Placeholder,     // _    \\ Placeholder / PartialApply
+    Identifier,         // name \\ Identifier
+    Number,             // 123  \\ NumericLiteral
+    String,             // " "  \\ StringLiteral
+    SingleQuotedString, // ' '  \\ StringLiteral
+    GraveQuotedString,  // ` `  \\ StringLiteral
+    MultilineString,    // """ \\ MultilineStringLiteral
+    Placeholder,        // _    \\ Placeholder / PartialApply
 
     // ─────────────────────────────────────────────
     // Комментарии
@@ -117,6 +120,9 @@ pub enum TokenType {
     For,   // for  \\ LoopFor
     While, // while\\ LoopWhile
     Loop,  // loop \\ InfiniteLoop
+
+    Spread,   // \\ ExpansionDirective
+    Generate, // \\ GeneratorBlock
 
     Break,    // break \\ LoopBreak
     Continue, // continue \\ LoopContinue
@@ -182,6 +188,7 @@ pub enum TokenType {
     // ─────────────────────────────────────────────
     This,  // this \\ CurrentInstance
     Super, // super\\ BaseInstance
+    Here,  // here \\ CurrentLocation
 
     // ─────────────────────────────────────────────
     // Модификаторы доступа и ОО
@@ -221,15 +228,27 @@ pub enum TokenType {
     // ─────────────────────────────────────────────
     // Доменные типы (Lacon)
     // ─────────────────────────────────────────────
-    UnitDegree,    // deg \\ AngleDegree
-    UnitRadian,    // rad \\ AngleRadian
-    UnitPercent,   // %   \\ Percentage
-    UnitLength,    // m   \\ LengthUnit
-    UnitTime,      // s   \\ TimeUnit
-    UnitFrequency, // Hz  \\ FrequencyUnit
-    UnitSpeed,     // m/s \\ SpeedUnit
-    UnitSize,      // B   \\ SizeUnit
-    UnitFraction,  // /   \\ FractionUnit
+    UnitDegree,              // deg \\ AngleDegree
+    UnitRadian,              // rad \\ AngleRadian
+    UnitPercent,             // %   \\ Percentage
+    UnitLength,              // m   \\ LengthUnit
+    UnitTime,                // s   \\ TimeUnit
+    UnitFrequency,           // Hz  \\ FrequencyUnit
+    UnitSpeed,               // m/s \\ SpeedUnit
+    UnitSize,                // B   \\ SizeUnit
+    UnitWeight,              // kg  \\ WeightUnit
+    UnitFraction,            // /   \\ FractionUnit
+    UnitDimension,           // DimensionalUnit
+    UnitTemperature,         // K \\ TemperatureUnit
+    UnitElectricVoltage,     // V \\ ElectricVoltage
+    UnitElectricCurrent,     // A \\ ElectricCurrent
+    UnitElectricCharge,      // C \\ ElectricCharge
+    UnitElectricResistance,  // Ω \\ ElectricResistance
+    UnitElectricConductance, // S \\ ElectricConductance
+    UnitElectricCapacitance, // F \\ ElectricCapacitance
+    UnitElectricPower,       // W \\ ElectricPower
+    UnitPressure,            // Pa  \\ PressureUnit
+    UnitEnergy,              // J  \\ EnergyUnit
 
     // ─────────────────────────────────────────────
     // Служебные

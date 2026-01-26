@@ -7,7 +7,6 @@ pub struct OpMatch {
 }
 
 /// Функция сопоставляет символы с соответствующими типами токенов.
-/// Принимает текущий символ и два последующих для обработки длинных операторов.
 pub fn match_operator(c1: char, c2: Option<char>, c3: Option<char>) -> OpMatch {
     match c1 {
         // Односимвольные
@@ -54,7 +53,13 @@ pub fn match_operator(c1: char, c2: Option<char>, c3: Option<char>) -> OpMatch {
         },
         '@' => simple(TokenType::At),
         '#' => simple(TokenType::Hash),
-        '$' => simple(TokenType::Dollar),
+        '$' => match c2 {
+            Some('{') => OpMatch {
+                token_type: TokenType::DollarLeftBrace,
+                consume_count: 1,
+            },
+            _ => simple(TokenType::Dollar),
+        },
 
         // Арифметика и составные операторы
         '+' => match c2 {
@@ -81,10 +86,6 @@ pub fn match_operator(c1: char, c2: Option<char>, c3: Option<char>) -> OpMatch {
                 token_type: TokenType::Arrow,
                 consume_count: 1,
             },
-            Some(c) if c.is_alphabetic() => simple(TokenType::Unknown),
-
-            Some(c) if c.is_digit(10) => simple(TokenType::Unknown),
-
             _ => simple(TokenType::Minus),
         },
         '*' => match c2 {
@@ -224,7 +225,6 @@ pub fn match_operator(c1: char, c2: Option<char>, c3: Option<char>) -> OpMatch {
     }
 }
 
-/// Вспомогательная функция для одиночных токенов
 fn simple(t: TokenType) -> OpMatch {
     OpMatch {
         token_type: t,

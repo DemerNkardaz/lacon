@@ -35,41 +35,20 @@ mod tests {
 
     #[test]
     fn test_lexer_to_file() {
-        // Твой тестовый код
-        let source2 = r#"
-// 1. Неоднозначность минуса: вычитание vs часть имени
-a - b      // Вычитание (Identifier, Operator, Identifier)
-a-b        // Единый идентификатор (Identifier)
-a -2       // Whitespace-присваивание отрицательного числа?
+        let source = r#"
+a - b     
+a-b       
+a -2      
 a - 2       
 a b - 2       
-a b -2       
+a b -2  
 
-// 2. Сложные отступы и пустые строки
-if true
-    
-    // Пустые строки с пробелами внутри не должны ломать Indent/Dedent
-    
-    sub-block
-        
-        target
-    
-// Резкий выход из двойной вложенности
-
-// 3. Крайние случаи Whitespace-присваивания
-key(arg) value    // После закрывающей скобки
-list[0] item      // После квадратной скобки
-"string" property // После строки (может ли строка быть ключом?)
-
-// 4. Слипшиеся операторы и точки
-Math.sqrt(2).to-string()
-1..10 // Диапазон (если поддерживается) или ошибка?
-#abc+10% // Цвет + Оператор + Процент
-
-// 5. Комментарии в неожиданных местах
-let x /* комментарий */ 10
-"#;
-        let source = r#"
+global const const-name a - b     
+global const const-name a-b       
+global const const-name a -2      
+global const const-name a - 2       
+global const const-name a b - 2       
+global const const-name a b -2  
 /|\ 1. Смешанный режим: отступы + явные скобки
 container App
     /|\ Внутри App работают отступы
@@ -109,6 +88,24 @@ root
 x = 10 / 2 /* деление */ + 5 /|\ сумма
 y = (5 * 2)z /|\ Whitespace-assign после скобок
 private const superstring<String> = "this is \"super\" string"
+
+let speed 278mi/h
+let length 25pc
+const generator-power 15kW
+const vector-shield-dimension 2D
+const fule-energy 1.5MJ
+
+let string "string"
+let string 'string'
+let string `string`
+let interpolated-string "string with ${first-word} and ${second-word}, \${escaped}"
+
+const first-word snow
+const second-word=fall
+const winter-${first-word}${second-word} #dbebed
+const winter-${first-word}-${second-word} #dbebed
+const winter-${first-word}_${second-word} #dbebed
+winter-${a}-${b} value
 "#;
 
         let mut scanner = Scanner::new(source.to_string());

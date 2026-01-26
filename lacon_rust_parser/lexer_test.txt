@@ -2,6 +2,93 @@ TYPE                 | LEXEME          | LITERAL
 --------------------------------------------------
 BOF                  |                 | None      
 Newline              |                 | None      
+Identifier           | a               | None      
+Whitespace           |                 | None      
+Minus                | -               | None      
+Identifier           | b               | None      
+Newline              |                 | None      
+Identifier           | a-b             | None      
+Newline              |                 | None      
+Identifier           | a               | None      
+Whitespace           |                 | None      
+Minus                | -               | None      
+Number               | 2               | 2         
+Newline              |                 | None      
+Identifier           | a               | None      
+Whitespace           |                 | None      
+Minus                | -               | None      
+Number               | 2               | 2         
+Newline              |                 | None      
+Identifier           | a               | None      
+Whitespace           |                 | None      
+Identifier           | b               | None      
+Whitespace           |                 | None      
+Minus                | -               | None      
+Number               | 2               | 2         
+Newline              |                 | None      
+Identifier           | a               | None      
+Whitespace           |                 | None      
+Identifier           | b               | None      
+Whitespace           |                 | None      
+Minus                | -               | None      
+Number               | 2               | 2         
+Newline              |                 | None      
+Newline              |                 | None      
+Global               | global          | None      
+Constant             | const           | None      
+Identifier           | const-name      | None      
+Whitespace           |                 | None      
+Identifier           | a               | None      
+Whitespace           |                 | None      
+Minus                | -               | None      
+Identifier           | b               | None      
+Newline              |                 | None      
+Global               | global          | None      
+Constant             | const           | None      
+Identifier           | const-name      | None      
+Whitespace           |                 | None      
+Identifier           | a-b             | None      
+Newline              |                 | None      
+Global               | global          | None      
+Constant             | const           | None      
+Identifier           | const-name      | None      
+Whitespace           |                 | None      
+Identifier           | a               | None      
+Whitespace           |                 | None      
+Minus                | -               | None      
+Number               | 2               | 2         
+Newline              |                 | None      
+Global               | global          | None      
+Constant             | const           | None      
+Identifier           | const-name      | None      
+Whitespace           |                 | None      
+Identifier           | a               | None      
+Whitespace           |                 | None      
+Minus                | -               | None      
+Number               | 2               | 2         
+Newline              |                 | None      
+Global               | global          | None      
+Constant             | const           | None      
+Identifier           | const-name      | None      
+Whitespace           |                 | None      
+Identifier           | a               | None      
+Whitespace           |                 | None      
+Identifier           | b               | None      
+Whitespace           |                 | None      
+Minus                | -               | None      
+Number               | 2               | 2         
+Newline              |                 | None      
+Global               | global          | None      
+Constant             | const           | None      
+Identifier           | const-name      | None      
+Whitespace           |                 | None      
+Identifier           | a               | None      
+Whitespace           |                 | None      
+Identifier           | b               | None      
+Whitespace           |                 | None      
+Minus                | -               | None      
+Number               | 2               | 2         
+Newline              |                 | None      
 Newline              |                 | None      
 Identifier           | container       | None      
 Whitespace           |                 | None      
@@ -20,8 +107,7 @@ UnitPercent          | 100%            | 100
 Newline              |                 | None      
 Identifier           | padding         | None      
 Colon                | :               | None      
-Number               | 20              | 20        
-Identifier           | px              | None      
+UnitLength           | 20px            | 20        
 Newline              |                 | None      
 Identifier           | color           | None      
 Colon                | :               | None      
@@ -43,7 +129,8 @@ Newline              |                 | None
 Indent               |                 | None      
 Identifier           | opacity         | None      
 Whitespace           |                 | None      
-Number               | -1.0            | -1.0      
+Minus                | -               | None      
+Number               | 1.0             | 1.0       
 Newline              |                 | None      
 Dedent               |                 | None      
 Else                 | else            | None      
@@ -62,12 +149,14 @@ Identifier           | calc-result     | None
 Equal                | =               | None      
 Identifier           | base-val        | None      
 Whitespace           |                 | None      
-Number               | -5              | -5        
+Minus                | -               | None      
+Number               | 5               | 5         
 Whitespace           |                 | None      
 MinusMinus           | --              | None      
 Number               | 2               | 2         
 Plus                 | +               | None      
-UnitPercent          | -10%            | -10       
+Minus                | -               | None      
+UnitPercent          | 10%             | 10        
 Newline              |                 | None      
 Newline              |                 | None      
 Newline              |                 | None      
@@ -132,5 +221,116 @@ Identifier           | String          | None
 Greater              | >               | None      
 Equal                | =               | None      
 String               | "this is \"super\" string" | this is \"super\" string
+Newline              |                 | None      
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | speed           | None      
+Whitespace           |                 | None      
+UnitSpeed            | 278mi/h         | 278       
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | length          | None      
+Whitespace           |                 | None      
+UnitLength           | 25pc            | 25        
+Newline              |                 | None      
+Constant             | const           | None      
+Identifier           | generator-power | None      
+Whitespace           |                 | None      
+UnitElectricPower    | 15kW            | 15        
+Newline              |                 | None      
+Constant             | const           | None      
+Identifier           | vector-shield-dimension | None      
+Whitespace           |                 | None      
+UnitDimension        | 2D              | 2         
+Newline              |                 | None      
+Constant             | const           | None      
+Identifier           | fule-energy     | None      
+Whitespace           |                 | None      
+UnitEnergy           | 1.5MJ           | 1.5       
+Newline              |                 | None      
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | string          | None      
+Whitespace           |                 | None      
+String               | "string"        | string    
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | string          | None      
+Whitespace           |                 | None      
+SingleQuotedString   | 'string'        | string    
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | string          | None      
+Whitespace           |                 | None      
+GraveQuotedString    | `string`        | string    
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | interpolated-string | None      
+Whitespace           |                 | None      
+String               | "string with    | string with 
+DollarLeftBrace      | ${              | None      
+Identifier           | first-word      | None      
+RightBrace           | }               | None      
+String               |  and            |  and      
+DollarLeftBrace      | ${              | None      
+Identifier           | second-word     | None      
+RightBrace           | }               | None      
+String               | , \${escaped}"  | , \${escaped}
+Newline              |                 | None      
+Newline              |                 | None      
+Constant             | const           | None      
+Identifier           | first-word      | None      
+Whitespace           |                 | None      
+Identifier           | snow            | None      
+Newline              |                 | None      
+Constant             | const           | None      
+Identifier           | second-word     | None      
+Equal                | =               | None      
+Identifier           | fall            | None      
+Newline              |                 | None      
+Constant             | const           | None      
+Identifier           | winter-         | None      
+DollarLeftBrace      | ${              | None      
+Identifier           | first-word      | None      
+RightBrace           | }               | None      
+DollarLeftBrace      | ${              | None      
+Identifier           | second-word     | None      
+RightBrace           | }               | None      
+Hash                 | #               | None      
+Identifier           | dbebed          | None      
+Newline              |                 | None      
+Constant             | const           | None      
+Identifier           | winter-         | None      
+DollarLeftBrace      | ${              | None      
+Identifier           | first-word      | None      
+RightBrace           | }               | None      
+Identifier           | -               | None      
+DollarLeftBrace      | ${              | None      
+Identifier           | second-word     | None      
+RightBrace           | }               | None      
+Hash                 | #               | None      
+Identifier           | dbebed          | None      
+Newline              |                 | None      
+Constant             | const           | None      
+Identifier           | winter-         | None      
+DollarLeftBrace      | ${              | None      
+Identifier           | first-word      | None      
+RightBrace           | }               | None      
+Identifier           | _               | None      
+DollarLeftBrace      | ${              | None      
+Identifier           | second-word     | None      
+RightBrace           | }               | None      
+Hash                 | #               | None      
+Identifier           | dbebed          | None      
+Newline              |                 | None      
+Identifier           | winter-         | None      
+DollarLeftBrace      | ${              | None      
+Identifier           | a               | None      
+RightBrace           | }               | None      
+Identifier           | -               | None      
+DollarLeftBrace      | ${              | None      
+Identifier           | b               | None      
+RightBrace           | }               | None      
+Identifier           | value           | None      
 Newline              |                 | None      
 EOF                  |                 | None      
