@@ -247,7 +247,7 @@ pub enum TokenType {
     UnitFrequency,           // Hz  \\ FrequencyUnit
     UnitSpeed,               // m/s \\ SpeedUnit
     UnitSize,                // B   \\ SizeUnit
-    UnitWeight,              // kg  \\ WeightUnit
+    UnitMass,                // kg  \\ MassUnit
     UnitFraction,            // /   \\ FractionUnit
     UnitDimension,           // DimensionalUnit
     UnitTemperature,         // K \\ TemperatureUnit
@@ -260,6 +260,9 @@ pub enum TokenType {
     UnitElectricPower,       // W \\ ElectricPower
     UnitPressure,            // Pa  \\ PressureUnit
     UnitEnergy,              // J  \\ EnergyUnit
+    UnitForce,               // N  \\ ForceUnit
+    UnitArea,                // m2 \\ AreaUnit
+    UnitVolume,              // m3 \\ VolumeUnit
 
     // ─────────────────────────────────────────────
     // Служебные

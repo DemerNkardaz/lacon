@@ -394,6 +394,30 @@ Equal                | =               | None
 UnitElectricResistance | 10000kΩ         | 10000     
 Newline              |                 | None      
 Constant             | const           | None      
+Identifier           | field-area      | None      
+Less                 | <               | None      
+Identifier           | Area            | None      
+Greater              | >               | None      
+Equal                | =               | None      
+UnitArea             | 73.14m2         | 73.14     
+Newline              |                 | None      
+Constant             | const           | None      
+Identifier           | cube-volume     | None      
+Less                 | <               | None      
+Identifier           | Volume          | None      
+Greater              | >               | None      
+Equal                | =               | None      
+UnitVolume           | 15m3            | 15        
+Newline              |                 | None      
+Constant             | const           | None      
+Identifier           | vessel-volume   | None      
+Less                 | <               | None      
+Identifier           | Volume          | None      
+Greater              | >               | None      
+Equal                | =               | None      
+UnitVolume           | 0.1kL           | 0.1       
+Newline              |                 | None      
+Constant             | const           | None      
 Identifier           | number2         | None      
 Less                 | <               | None      
 Identifier           | Number          | None      
@@ -437,23 +461,44 @@ Newline              |                 | None
 Constant             | const           | None      
 Identifier           | abcdefg         | None      
 Equal                | =               | None      
-UnitWeight           | Infinitykg      | Infinity  
+UnitMass             | Infinitykg      | Infinity  
 Newline              |                 | None      
 Constant             | const           | None      
 Identifier           | hijklmn         | None      
 Equal                | =               | None      
 Minus                | -               | None      
-UnitWeight           | Infinitykg      | Infinity  
+UnitMass             | Infinitykg      | Infinity  
 Newline              |                 | None      
 Constant             | const           | None      
 Identifier           | abcdefg         | None      
 Equal                | =               | None      
-UnitWeight           | 10kg            | 10        
+UnitMass             | 10kg            | 10        
 Newline              |                 | None      
 Constant             | const           | None      
 Identifier           | hijklmn         | None      
 Equal                | =               | None      
 Minus                | -               | None      
-UnitWeight           | 10kg            | 10        
+UnitMass             | 10kg            | 10        
+Newline              |                 | None      
+Newline              |                 | None      
+Constant             | const           | None      
+Identifier           | area            | None      
+Equal                | =               | None      
+UnitArea             | 25m2            | 25        
+Newline              |                 | None      
+Constant             | const           | None      
+Identifier           | volume          | None      
+Equal                | =               | None      
+UnitVolume           | 25m3            | 25        
+Newline              |                 | None      
+Constant             | const           | None      
+Identifier           | force           | None      
+Equal                | =               | None      
+UnitForce            | 25TN            | 25        
+Newline              |                 | None      
+Constant             | const           | None      
+Identifier           | pressure        | None      
+Equal                | =               | None      
+UnitPressure         | 25MPa           | 25        
 Newline              |                 | None      
 EOF                  |                 | None      

@@ -171,7 +171,7 @@
         },
         {
           "comment": "6. Универсальное правило СИ (префикс + база)",
-          "match": "(\\b\\d[0-9_]*(?:\\.[0-9_]+)?|[iI]nfinity)(?:(da|h|k|M|G|T|P|E|Z|Y|R|Q|d|c|m|μ|µ|u|n|p|f|a|z|y|r|q))?(Hz|m|g|V|A|W|Ω|ohm|C|S|F|J|Pa|b|B|s|sec|min|hour|day|week|month|year|D|t|lb|oz|kn|px|em|rem|pt|in|pc|cal|Wh|psi|bar)\\b",
+          "match": "(\\b\\d[0-9_]*(?:\\.[0-9_]+)?|[iI]nfinity)(?:(da|h|k|M|G|T|P|E|Z|Y|R|Q|d|c|m|μ|u|n|p|f|a|z|y|r|q))?(Hz|m|m2|m3|L|g|V|A|W|Ω|ohm|C|S|F|J|Pa|N|b|B|s|sec|min|hour|day|week|month|year|D|t|lb|oz|kn|px|em|rem|pt|in|pc|cal|Wh|psi|bar)\\b",
           "captures": {
             "1": { "name": "constant.numeric.lacon" },
             "2": { "name": "keyword.other.unit.prefix.lacon" },
@@ -196,12 +196,12 @@
         { "name": "keyword.control.flow.lacon", "match": "(?<!\\.)\\b(break|continue|return|yield|exit|cancel)\\b" },
         { "name": "keyword.control.exception.lacon", "match": "(?<!\\.)\\b(try|catch|finally|throw)\\b" },
         { "name": "keyword.control.async.lacon", "match": "(?<!\\.)\\b(await|async|coroutine|defer)\\b" },
-        { "name": "keyword.operator.expression.lacon", "match": "(?<!\\.)\\b(contains|where|as|is|in|of|extends|implements)\\b" }
+        { "name": "keyword.operator.expression.lacon", "match": "(?<!\\.)\\b(contains|where|as|is|in|of|[eE]xtends|[iI]mplements)\\b" }
       ]
     },
     "storage-modifiers": {
       "patterns": [
-        { "name": "storage.type.lacon", "match": "\\b(class|interface|enum|function|procedure|type|alias)\\b" },
+        { "name": "storage.type.lacon", "match": "\\b(class|interface|enum|function|procedure|[tT]ype|alias)\\b" },
         { "name": "support.type.lacon", "match": "\\b(auto)\\b" },
         { "name": "storage.modifier.oo.lacon", "match": "\\b(static|virtual|abstract|override|final)\\b" }
       ]
@@ -248,10 +248,10 @@
     "value-types": {
       "patterns": [
         { "name": "support.type.number.lacon", "match": "\\b(Number|Int|Float|Hex|Octal|Binary|Base32)\\b" },
-        { "name": "support.type.unit.lacon", "match": "\\b(Unit|Length|Time|Speed|Degree|Radian|Percent|Frequency|Fraction|Dimension|Temperature|Pressure|Volume|Energy|Size|Weight)\\b" },
+        { "name": "support.type.unit.lacon", "match": "\\b(Unit|Length|Time|Speed|Degree|Radian|Percent|Frequency|Fraction|Dimension|Temperature|Pressure|Volume|Energy|Size|Mass|Force|Area)\\b" },
         { "name": "support.type.unit.electric.lacon", "match": "\\b(Electric)*(Power|Current|Voltage|Charge|Resistance|Conductance|Capacitance)\\b" },
-        { "name": "support.type.object.lacon", "match": "\\b(Object|Array|Dictionary|Table|Function|Procedure)\\b" },
-        { "name": "support.type.other.lacon", "match": "\\b(Any|String|Boolean)\\b" }
+        { "name": "support.type.object.lacon", "match": "\\b(Object|Array|Dictionary|Table|Function|Procedure|MultilineString)\\b" },
+        { "name": "support.type.other.lacon", "match": "\\b(Any|String|Boolean|Auto|None|Nil|Undefined|Color)\\b" }
       ]
     },
     "attributes": {

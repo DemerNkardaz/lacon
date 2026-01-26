@@ -85,6 +85,9 @@ const temperature<Temperature> = 25°C
 const temperature<Temperature> = 25K
 const resistance<ElectricResistance> = 10_000MΩ
 const resistance<ElectricResistance> = 10000kΩ
+const field-area<Area> = 73.14m2
+const cube-volume<Volume> = 15m3
+const vessel-volume<Volume> = 0.1kL
 const number2<Number> = 0b1011110011
 const number8<Number> = 0o071
 const number16<Number> = 0x348FABD1
@@ -95,6 +98,11 @@ const abcdefg = Infinitykg
 const hijklmn = -Infinitykg
 const abcdefg = 10kg
 const hijklmn = -10kg
+
+const area = 25m2
+const volume = 25m3
+const force = 25TN
+const pressure = 25MPa
 "#;
 
         let source2 = r#"

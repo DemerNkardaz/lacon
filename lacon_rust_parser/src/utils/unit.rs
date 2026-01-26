@@ -39,7 +39,9 @@ fn match_base_unit(base: &str) -> Option<TokenType> {
 
         // Длина и Вес
         "m" => Some(TokenType::UnitLength),
-        "g" => Some(TokenType::UnitWeight),
+        "g" => Some(TokenType::UnitMass),
+        "m2" => Some(TokenType::UnitArea),
+        "m3" | "L" => Some(TokenType::UnitVolume),
 
         // Электричество
         "V" => Some(TokenType::UnitElectricVoltage), // Вольт
@@ -53,6 +55,9 @@ fn match_base_unit(base: &str) -> Option<TokenType> {
         // Энергия и Давление
         "J" => Some(TokenType::UnitEnergy),
         "Pa" => Some(TokenType::UnitPressure),
+
+        // Сила
+        "N" => Some(TokenType::UnitForce),
 
         // Данные (IT)
         "b" | "B" => Some(TokenType::UnitSize), // бит или Байт
