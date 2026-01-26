@@ -311,7 +311,7 @@ Less                 | <               | None
 Identifier           | Speed           | None      
 Greater              | >               | None      
 Equal                | =               | None      
-UnitSpeed            | 278ft/s         | 278       
+UnitVelocity         | 278ft/s         | 278       
 Newline              |                 | None      
 Variable             | let             | None      
 Identifier           | time            | None      
@@ -500,5 +500,115 @@ Constant             | const           | None
 Identifier           | pressure        | None      
 Equal                | =               | None      
 UnitPressure         | 25MPa           | 25        
+Newline              |                 | None      
+Constant             | const           | None      
+Identifier           | byterate        | None      
+Equal                | =               | None      
+UnitBitRate          | 25Mbit/s        | 25        
+Newline              |                 | None      
+Constant             | const           | None      
+Identifier           | byterate        | None      
+Equal                | =               | None      
+UnitBitRate          | 25MB/s          | 25        
+Newline              |                 | None      
+Constant             | const           | None      
+Identifier           | byterate        | None      
+Equal                | =               | None      
+UnitBitRate          | 25MiB/s         | 25        
+Newline              |                 | None      
+Constant             | const           | None      
+Identifier           | byterate        | None      
+Equal                | =               | None      
+UnitBitRate          | 25YiB/s         | 25        
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | a               | None      
+Equal                | =               | None      
+UnitVelocity         | 2.5m/s          | 2.5       
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | a               | None      
+Equal                | =               | None      
+UnitAcceleration     | 2.5m/s2         | 2.5       
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | a               | None      
+Equal                | =               | None      
+UnitJerk             | 2.5m/s3         | 2.5       
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | a               | None      
+Equal                | =               | None      
+UnitSnap             | 2.5m/s4         | 2.5       
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | a               | None      
+Equal                | =               | None      
+UnitCrackle          | 2.5m/s5         | 2.5       
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | a               | None      
+Equal                | =               | None      
+UnitPop              | 2.5m/s6         | 2.5       
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | a               | None      
+Equal                | =               | None      
+UnitVelocity         | 2.5Tm/h         | 2.5       
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | a               | None      
+Equal                | =               | None      
+UnitVelocity         | 2.5km/h         | 2.5       
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | a               | None      
+Equal                | =               | None      
+UnitVelocity         | 2.5m/h          | 2.5       
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | a               | None      
+Equal                | =               | None      
+UnitVelocity         | 2.5μm/s         | 2.5       
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | a               | None      
+Equal                | =               | None      
+UnitVelocity         | 25mph           | 25        
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | a               | None      
+Equal                | =               | None      
+UnitMass             | 25t             | 25        
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | a               | None      
+Equal                | =               | None      
+UnitDensity          | 25kg/m3         | 25        
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | a               | None      
+Equal                | =               | None      
+UnitDensity          | 25Mg/m3         | 25        
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | a               | None      
+Equal                | =               | None      
+UnitIlluminance      | 25μlx           | 25        
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | a               | None      
+Equal                | =               | None      
+UnitLuminousFlux     | 25Tlm           | 25        
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | a               | None      
+Equal                | =               | None      
+UnitLuminousIntensity | 25kcd           | 25        
+Newline              |                 | None      
+Variable             | let             | None      
+Identifier           | a               | None      
+Equal                | =               | None      
+UnitAmount           | 25nmol          | 25        
 Newline              |                 | None      
 EOF                  |                 | None      

@@ -163,7 +163,7 @@
         },
         {
           "comment": "5. Сложные скорости (km/h, m/s и т.д.)",
-          "match": "(\\b\\d[0-9_]*(?:\\.[0-9_]+)?|[iI]nfinity)([a-z]+/[a-z]+)",
+          "match": "(\\b\\d[0-9_]*(?:\\.[0-9_]+)?|[iI]nfinity)([a-zA-Zμ]+/[a-zA-Z0-9]+)",
           "captures": {
             "1": { "name": "constant.numeric.lacon" },
             "2": { "name": "keyword.other.unit.lacon" }
@@ -171,7 +171,7 @@
         },
         {
           "comment": "6. Универсальное правило СИ (префикс + база)",
-          "match": "(\\b\\d[0-9_]*(?:\\.[0-9_]+)?|[iI]nfinity)(?:(da|h|k|M|G|T|P|E|Z|Y|R|Q|d|c|m|μ|u|n|p|f|a|z|y|r|q))?(Hz|m|m2|m3|L|g|V|A|W|Ω|ohm|C|S|F|J|Pa|N|b|B|s|sec|min|hour|day|week|month|year|D|t|lb|oz|kn|px|em|rem|pt|in|pc|cal|Wh|psi|bar)\\b",
+          "match": "(\\b\\d[0-9_]*(?:\\.[0-9_]+)?|[iI]nfinity)(?:(da|h|k|M|G|T|P|E|Z|Y|R|Q|d|c|m|μ|u|n|p|f|a|z|y|r|q))?(Hz|m|m2|m3|L|g|V|A|W|Ω|ohm|C|S|F|J|Pa|N|b|B|T|s|sec|min|hour|day|week|month|year|D|t|lb|oz|kn|px|em|rem|pt|in|pc|cal|Wh|psi|bar|lx|lm|mol|cd)\\b",
           "captures": {
             "1": { "name": "constant.numeric.lacon" },
             "2": { "name": "keyword.other.unit.prefix.lacon" },
@@ -248,8 +248,9 @@
     "value-types": {
       "patterns": [
         { "name": "support.type.number.lacon", "match": "\\b(Number|Int|Float|Hex|Octal|Binary|Base32)\\b" },
-        { "name": "support.type.unit.lacon", "match": "\\b(Unit|Length|Time|Speed|Degree|Radian|Percent|Frequency|Fraction|Dimension|Temperature|Pressure|Volume|Energy|Size|Mass|Force|Area)\\b" },
+        { "name": "support.type.unit.lacon", "match": "\\b(Unit|Length|Time|Velocity|Acceleration|Jerk|Snap|Crackle|Pop|Amount|Degree|Radian|Percent|Frequency|Fraction|Dimension|Temperature|Pressure|Volume|Energy|Size|Mass|Force|Area|BitRate)\\b" },
         { "name": "support.type.unit.electric.lacon", "match": "\\b(Electric)*(Power|Current|Voltage|Charge|Resistance|Conductance|Capacitance)\\b" },
+        { "name": "support.type.unit.light.lacon", "match": "\\b(LuminousFlux|Illuminance|LuminousIntensity)\\b" },
         { "name": "support.type.object.lacon", "match": "\\b(Object|Array|Dictionary|Table|Function|Procedure|MultilineString)\\b" },
         { "name": "support.type.other.lacon", "match": "\\b(Any|String|Boolean|Auto|None|Nil|Undefined|Color)\\b" }
       ]

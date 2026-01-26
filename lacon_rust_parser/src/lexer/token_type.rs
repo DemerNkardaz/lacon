@@ -245,9 +245,17 @@ pub enum TokenType {
     UnitLength,              // m   \\ LengthUnit
     UnitTime,                // s   \\ TimeUnit
     UnitFrequency,           // Hz  \\ FrequencyUnit
-    UnitSpeed,               // m/s \\ SpeedUnit
+    UnitVelocity,            // m/s \\ SpeedUnit
+    UnitAcceleration,        // m/s2 \\ AccelerationUnit
+    UnitJerk,                // m/s3 \\ JerkUnit
+    UnitSnap,                // m/s4 \\ SnapUnit
+    UnitCrackle,             // m/s5 \\ CrackleUnit
+    UnitPop,                 // m/s6 \\ PopUnit
     UnitSize,                // B   \\ SizeUnit
-    UnitMass,                // kg  \\ MassUnit
+    UnitBitRate,             // bps \\ BitRate
+    UnitMass,                // g  \\ MassUnit
+    UnitDensity,             // kg/m3 \\ Density
+    UnitAmount,              // mol \\ Amount
     UnitFraction,            // /   \\ FractionUnit
     UnitDimension,           // DimensionalUnit
     UnitTemperature,         // K \\ TemperatureUnit
@@ -258,6 +266,9 @@ pub enum TokenType {
     UnitElectricConductance, // S \\ ElectricConductance
     UnitElectricCapacitance, // F \\ ElectricCapacitance
     UnitElectricPower,       // W \\ ElectricPower
+    UnitLuminousIntensity,   // cd \\ LuminousIntensity
+    UnitLuminousFlux,        // lm \\ LuminousFlux
+    UnitIlluminance,         // lx \\ Illuminance
     UnitPressure,            // Pa  \\ PressureUnit
     UnitEnergy,              // J  \\ EnergyUnit
     UnitForce,               // N  \\ ForceUnit

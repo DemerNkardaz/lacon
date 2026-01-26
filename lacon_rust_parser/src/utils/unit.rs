@@ -40,8 +40,20 @@ fn match_base_unit(base: &str) -> Option<TokenType> {
         // Длина и Вес
         "m" => Some(TokenType::UnitLength),
         "g" => Some(TokenType::UnitMass),
+
+        "g/m3" => Some(TokenType::UnitDensity),
         "m2" => Some(TokenType::UnitArea),
         "m3" | "L" => Some(TokenType::UnitVolume),
+
+        "mol" => Some(TokenType::UnitAmount),
+
+        "m/s" => Some(TokenType::UnitVelocity),
+        "m/h" => Some(TokenType::UnitVelocity),
+        "m/s2" => Some(TokenType::UnitAcceleration),
+        "m/s3" => Some(TokenType::UnitJerk),
+        "m/s4" => Some(TokenType::UnitSnap),
+        "m/s5" => Some(TokenType::UnitCrackle),
+        "m/s6" => Some(TokenType::UnitPop),
 
         // Электричество
         "V" => Some(TokenType::UnitElectricVoltage), // Вольт
@@ -52,6 +64,10 @@ fn match_base_unit(base: &str) -> Option<TokenType> {
         "S" => Some(TokenType::UnitElectricConductance), // Сименс
         "F" => Some(TokenType::UnitElectricCapacitance), // Фарад
 
+        "lm" => Some(TokenType::UnitLuminousFlux), // Lumen
+        "lx" => Some(TokenType::UnitIlluminance),  // Lux
+        "cd" => Some(TokenType::UnitLuminousIntensity), // Candela
+
         // Энергия и Давление
         "J" => Some(TokenType::UnitEnergy),
         "Pa" => Some(TokenType::UnitPressure),
@@ -61,6 +77,7 @@ fn match_base_unit(base: &str) -> Option<TokenType> {
 
         // Данные (IT)
         "b" | "B" => Some(TokenType::UnitSize), // бит или Байт
+        "bit/s" | "B/s" | "iB/s" => Some(TokenType::UnitBitRate), // бит в секунду или Байт в секунду
 
         // Время (малые величины: ms, ns, µs)
         "s" | "sec" => Some(TokenType::UnitTime),
@@ -71,10 +88,10 @@ fn match_base_unit(base: &str) -> Option<TokenType> {
 
 fn match_other_exact_units(suffix: &str) -> Option<TokenType> {
     match suffix {
+        // Масса
+        "t" => Some(TokenType::UnitMass),
         // Скорость
-        "m/s" | "m/h" | "km/s" | "km/h" | "fps" | "ft/s" | "mph" | "mi/h" | "kn" => {
-            Some(TokenType::UnitSpeed)
-        }
+        "fps" | "ft/s" | "mph" | "mi/h" | "kn" => Some(TokenType::UnitVelocity),
         // Длина (вне СИ)
         "ft" | "mi" | "em" | "rem" | "pt" | "in" | "px" | "pc" => Some(TokenType::UnitLength),
         // Время (длинные периоды)
