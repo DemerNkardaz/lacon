@@ -73,6 +73,7 @@ spread (['c', 's'], ['prosgegrammeni', 'ypogegrammeni'], [1FBC, 1FB3]) as let (l
 	}
 }
 
+let что-то-там = 20_000μW
 let speed<Speed> = 278ft/s
 let time<Time> = 25μs
 let length<Length> = 25pc

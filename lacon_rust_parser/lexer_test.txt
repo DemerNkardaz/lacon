@@ -301,6 +301,11 @@ RightBrace           | }               | None
 Newline              |                 | None      
 Newline              |                 | None      
 Variable             | let             | None      
+Identifier           | что-то-там      | None      
+Equal                | =               | None      
+UnitElectricPower    | 20_000μW        | 20_000    
+Newline              |                 | None      
+Variable             | let             | None      
 Identifier           | speed           | None      
 Less                 | <               | None      
 Identifier           | Speed           | None      

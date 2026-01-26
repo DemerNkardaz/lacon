@@ -169,7 +169,7 @@
         },
         {
           "comment": "6. Универсальное правило СИ (префикс + база)",
-          "match": "(\\b\\d[0-9_]*(?:\\.[0-9_]+)?)(?:(da|h|k|M|G|T|P|E|Z|Y|R|Q|d|c|m|μ|µ|u|n|p|f|a|z|y|r|q))?(Hz|m|g|V|A|W|Ω|ohm|C|S|F|J|Pa|b|B|s|sec|min|hour|day|week|month|year|D|t|lb|oz|kn|px|   em|rem|pt|in|pc|cal|Wh|psi|bar)\\b",
+          "match": "(\\b\\d[0-9_]*(?:\\.[0-9_]+)?)(?:(da|h|k|M|G|T|P|E|Z|Y|R|Q|d|c|m|μ|µ|u|n|p|f|a|z|y|r|q))?(Hz|m|g|V|A|W|Ω|ohm|C|S|F|J|Pa|b|B|s|sec|min|hour|day|week|month|year|D|t|lb|oz|kn|px|em|rem|pt|in|pc|cal|Wh|psi|bar)\\b",
           "captures": {
             "1": { "name": "constant.numeric.lacon" },
             "2": { "name": "keyword.other.unit.prefix.lacon" },
@@ -187,14 +187,14 @@
     },
     "keywords": {
       "patterns": [
-        { "name": "keyword.control.import.lacon", "match": "\\b(import|export|from|include)\\b" },
-        { "name": "keyword.control.conditional.lacon", "match": "\\b(if|else|elif|match|case|default|switch|when)\\b" },
-        { "name": "keyword.control.loop.lacon", "match": "\\b(for|while|loop|in|of)\\b" },
-        { "name": "keyword.control.directive.lacon", "match": "\\b(generate|spread)\\b" },
-        { "name": "keyword.control.flow.lacon", "match": "\\b(break|continue|return|yield|exit|cancel)\\b" },
-        { "name": "keyword.control.exception.lacon", "match": "\\b(try|catch|finally|throw)\\b" },
-        { "name": "keyword.control.async.lacon", "match": "\\b(await|async|coroutine|defer)\\b" },
-        { "name": "keyword.other.lacon", "match": "\\b(where|as|is|extends|implements)\\b" }
+        { "name": "keyword.control.import.lacon", "match": "(?<!\\.)\\b(import|export|from|include)\\b" },
+        { "name": "keyword.control.conditional.lacon", "match": "(?<!\\.)\\b(if|else|elif|match|case|default|switch|when)\\b" },
+        { "name": "keyword.control.loop.lacon", "match": "(?<!\\.)\\b(for|while|loop|in|of)\\b" },
+        { "name": "keyword.control.directive.lacon", "match": "(?<!\\.)\\b(generate|spread|filter)\\b" },
+        { "name": "keyword.control.flow.lacon", "match": "(?<!\\.)\\b(break|continue|return|yield|exit|cancel)\\b" },
+        { "name": "keyword.control.exception.lacon", "match": "(?<!\\.)\\b(try|catch|finally|throw)\\b" },
+        { "name": "keyword.control.async.lacon", "match": "(?<!\\.)\\b(await|async|coroutine|defer)\\b" },
+        { "name": "keyword.other.lacon", "match": "(?<!\\.)\\b(where|as|is|extends|implements)\\b" }
       ]
     },
     "storage-modifiers": {
@@ -226,20 +226,25 @@
         { "name": "constant.language.boolean.lacon", "match": "\\b(true|false)\\b" },
         { "name": "constant.language.null.lacon", "match": "\\b(nil|none|undefined)\\b" },
         { "name": "variable.language.lacon", "match": "\\b(this|super|here)\\b" },
+        { "name": "variable.language.value.lacon", "match": "\\b(values?|v)\\b" },
+        { "name": "variable.language.method.lacon", "match": "\\b(methods?)\\b" },
+        { "name": "variable.language.each.lacon", "match": "\\b(each)\\b" },
+        { "name": "variable.language.key.lacon", "match": "\\b(key|k)\\b" },
+        { "name": "variable.language.index.lacon", "match": "\\b(index|indexes|indexOf|i|j)\\b" },
         { "name": "constant.other.placeholder.lacon", "match": "\\b_\\b" }
       ]
     },
     "attributes": {
       "patterns": [
         { "name": "storage.type.attribute.lacon", "match": "\\b(meta|reflect|attribute)\\b" },
-        { "name": "entity.name.tag.attribute.lacon", "match": "@[a-zA-Z_][a-zA-Z0-9_]*" },
-        { "name": "entity.name.tag.directive.lacon", "match": "#[a-zA-Z_][a-zA-Z0-9_]*" }
+        { "name": "entity.name.tag.attribute.lacon", "match": "@[\\p{L}_][\\p{L}\\p{N}_-]*" },
+        { "name": "entity.name.tag.directive.lacon", "match": "#[\\p{L}_][\\p{L}\\p{N}_-]*" }
       ]
     },
     "functions": {
       "patterns": [
         {
-          "match": "\\b(function|procedure)\\s+([a-zA-Z_][a-zA-Z0-9_-]*)",
+          "match": "\\b(function|procedure)\\s+([\\p{L}_][\\p{L}\\p{N}_-]*)",
           "captures": {
             "1": { "name": "storage.type.function.lacon" },
             "2": { "name": "entity.name.function.lacon" }
@@ -247,14 +252,14 @@
         },
         {
           "name": "entity.name.function.call.lacon",
-          "match": "\\b([a-zA-Z_][a-zA-Z0-9_-]*)(?=\\s*\\()"
+          "match": "\\b([\\p{L}_][\\p{L}\\p{N}_-]*)(?=\\s*\\()"
         }
       ]
     },
     "type-annotations": {
       "patterns": [
         {
-          "match": "(<)([a-zA-Z_][a-zA-Z0-9_]*)(>)",
+          "match": "(<)([\\p{L}_][\\p{L}\\p{N}_]*)(>)",
           "captures": {
             "1": { "name": "punctuation.definition.typeparameters.begin.lacon" },
             "2": { "name": "entity.name.type.lacon" },
@@ -266,19 +271,19 @@
     "types": {
       "patterns": [
         {
-          "match": "\\b(class|interface|enum)\\s+([A-Z][a-zA-Z0-9_]*)",
+          "match": "\\b(class|interface|enum)\\s+([\\p{Lu}][\\p{L}\\p{N}_]*)",
           "captures": {
             "1": { "name": "storage.type.lacon" },
             "2": { "name": "entity.name.type.lacon" }
           }
         },
-        { "name": "entity.name.type.lacon", "match": "\\b[A-Z][a-zA-Z0-9_]*\\b" }
+        { "name": "entity.name.type.lacon", "match": "\\b[\\p{Lu}][\\p{L}\\p{N}_]*\\b" }
       ]
     },
     "identifiers": {
       "patterns": [
-        { "name": "variable.other.constant.lacon", "match": "\\b[A-Z][A-Z0-9_]*\\b" },
-        { "name": "variable.other.lacon", "match": "\\b[a-z_][a-zA-Z0-9_-]*\\b" }
+        { "name": "variable.other.constant.lacon", "match": "\\b[\\p{Lu}][\\p{Lu}\\p{N}_]*\\b" },
+        { "name": "variable.other.lacon", "match": "\\b[\\p{Ll}_][\\p{L}\\p{N}_-]*\\b" }
       ]
     }
   }

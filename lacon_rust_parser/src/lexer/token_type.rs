@@ -121,8 +121,10 @@ pub enum TokenType {
     While, // while\\ LoopWhile
     Loop,  // loop \\ InfiniteLoop
 
-    Spread,   // \\ ExpansionDirective
-    Generate, // \\ GeneratorBlock
+    Spread,   // spread \\ ExpansionDirective
+    Generate, // generate \\ GeneratorBlock
+
+    Filter, // filter \\ Filter
 
     Break,    // break \\ LoopBreak
     Continue, // continue \\ LoopContinue

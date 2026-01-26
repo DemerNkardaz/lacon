@@ -19,6 +19,7 @@ lazy_static! {
         m.insert("while",      TokenType::While);
         m.insert("spread",      TokenType::Spread);
         m.insert("generate",      TokenType::Generate);
+        m.insert("filter",      TokenType::Filter);
         m.insert("loop",       TokenType::Loop);
         m.insert("break",      TokenType::Break);
         m.insert("continue",   TokenType::Continue);
