@@ -52,7 +52,7 @@ impl Token {
             lexeme,
             literal,
             position,
-            length: length as u32, // Приводим usize к u32
+            length: length as u32,
             flags,
         }
     }
@@ -67,6 +67,20 @@ impl Token {
             length: 0,
             flags: TokenFlags::empty(),
         }
+    }
+
+    pub fn get_unit_suffix(&self) -> &str {
+        // Вызываем сгенерированный макросом метод
+        if !self.token_type.is_unit() {
+            return "—";
+        }
+
+        if let Some(ref lit) = self.literal {
+            if self.lexeme.starts_with(lit) {
+                return &self.lexeme[lit.len()..];
+            }
+        }
+        ""
     }
 
     /// Вспомогательный метод для создания токена ошибки.

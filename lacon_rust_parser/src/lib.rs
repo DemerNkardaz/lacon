@@ -217,11 +217,11 @@ const emptyItem = [value, , value]
 
         writeln!(
             file,
-            "{:<30} | {:<40} | {:<30} | {:<10} | {:<10} | {:<10}",
-            "TYPE", "LEXEME", "LITERAL", "POSITION", "LINE START", "WHITESPACE"
+            "{:<30} | {:<40} | {:<20} | {:<10} | {:<10} | {:<10} | {:<10}",
+            "TYPE", "LEXEME", "LITERAL", "UNIT", "POSITION", "LINE START", "WHITESPACE"
         )
         .unwrap();
-        writeln!(file, "{}", "-".repeat(146)).unwrap();
+        writeln!(file, "{}", "-".repeat(150)).unwrap();
 
         for token in tokens {
             let literal_str = match &token.literal {
@@ -231,10 +231,11 @@ const emptyItem = [value, , value]
 
             writeln!(
                 file,
-                "{:<30} | {:<40} | {:<30} | {:<10} | {:<10} | {:<10}",
+                "{:<30} | {:<40} | {:<20} | {:<10} | {:<10} | {:<10} | {:<10}",
                 format!("{:?}", token.token_type),
                 token.lexeme.replace("\n", "\\n"),
                 literal_str,
+                token.get_unit_suffix(),
                 token.position.to_string(),
                 // Проверяем наличие флага начала строки
                 if token.flags.contains(TokenFlags::AT_LINE_START) {
