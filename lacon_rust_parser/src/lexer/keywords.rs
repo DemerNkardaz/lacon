@@ -127,7 +127,7 @@ lazy_static! {
         add(&["rad"],                          TokenType::UnitRadian);
 
         // --- Константы и Маркеры ---
-        add(&["infinity", "Infinity"],                     TokenType::NumberInfinity);
+        add(&["infinity", "Infinity"],         TokenType::NumberInfinity);
         add(&["Marker"],                       TokenType::Marker);
 
         m

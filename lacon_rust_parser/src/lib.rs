@@ -27,10 +27,10 @@
 
 pub mod lexer;
 pub mod utils;
-
 #[cfg(test)]
 mod tests {
     use crate::lexer::scanner::Scanner;
+    use crate::lexer::token::TokenFlags;
     use std::fs::File;
     use std::io::Write;
 
@@ -125,6 +125,12 @@ let a = 25μlx
 let a = 25Tlm
 let a = 25kcd
 let a = 25nmol
+
+text-data = """
+    Line 1
+    Line 2
+    """.trim().to-upper()
+
 "#;
 
         let source2 = r#"
@@ -211,24 +217,37 @@ const emptyItem = [value, , value]
 
         writeln!(
             file,
-            "{:<20} | {:<15} | {:<10}",
-            "TYPE", "LEXEME", "LITERAL"
+            "{:<30} | {:<40} | {:<30} | {:<10} | {:<10} | {:<10}",
+            "TYPE", "LEXEME", "LITERAL", "POSITION", "LINE START", "WHITESPACE"
         )
         .unwrap();
-        writeln!(file, "{}", "-".repeat(50)).unwrap();
+        writeln!(file, "{}", "-".repeat(146)).unwrap();
 
         for token in tokens {
             let literal_str = match &token.literal {
                 Some(l) => l.clone(),
-                None => "None".to_string(),
+                None => "".to_string(),
             };
 
             writeln!(
                 file,
-                "{:<20} | {:<15} | {:<10}",
+                "{:<30} | {:<40} | {:<30} | {:<10} | {:<10} | {:<10}",
                 format!("{:?}", token.token_type),
                 token.lexeme.replace("\n", "\\n"),
-                literal_str
+                literal_str,
+                token.position.to_string(),
+                // Проверяем наличие флага начала строки
+                if token.flags.contains(TokenFlags::AT_LINE_START) {
+                    "True"
+                } else {
+                    ""
+                },
+                // Добавляем колонку для пробела (по желанию)
+                if token.flags.contains(TokenFlags::HAS_PRECEDING_WHITESPACE) {
+                    "WS"
+                } else {
+                    ""
+                }
             )
             .unwrap();
         }

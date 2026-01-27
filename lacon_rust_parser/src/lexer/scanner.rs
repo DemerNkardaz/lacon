@@ -35,13 +35,13 @@ impl Scanner {
             context_stack: Vec::new(),
             string_stack: Vec::new(),
             is_at_line_start: true,
-            had_whitespace: true,
+            had_whitespace: false, // На старте пробела нет
             errors: Vec::new(),
         }
     }
 
     pub fn scan_tokens(&mut self) -> &Vec<Token> {
-        self.add_token_raw(TokenType::BOF);
+        self.add_token_raw(TokenType::SOF);
 
         while !self.is_at_end() {
             self.start = self.current;
@@ -68,33 +68,22 @@ impl Scanner {
         let c = self.advance();
 
         match c {
+            // Теперь пробелы просто устанавливают флаг и не создают токенов
             ' ' | '\t' | '\r' => {
                 self.had_whitespace = true;
-                if c != '\r' && self.is_assign_whitespace() {
-                    self.add_token_raw(TokenType::Whitespace);
-                }
                 self.start = self.current;
                 self.start_position = self.position;
             }
             '\n' => {
-                self.had_whitespace = true;
                 self.add_token_raw(TokenType::Newline);
                 self.is_at_line_start = true;
+                self.had_whitespace = false; // После новой строки пробел сбрасываем (его учтет Indent)
                 self.start = self.current;
                 self.start_position = self.position;
             }
 
-            '"' => {
-                self.had_whitespace = false;
-                self.scan_string('"');
-            }
-            '\'' => {
-                self.had_whitespace = false;
-                self.scan_string('\'');
-            }
-            '`' => {
-                self.had_whitespace = false;
-                self.scan_string('`');
+            '"' | '\'' | '`' => {
+                self.scan_string(c);
             }
 
             '(' | '[' | '{' => {
@@ -105,7 +94,6 @@ impl Scanner {
                 };
                 self.context_stack.push(t_type);
                 self.handle_operator(c);
-                self.had_whitespace = false;
             }
 
             ')' | ']' | '}' => {
@@ -113,7 +101,6 @@ impl Scanner {
                     self.context_stack.pop();
                 }
                 self.handle_operator(c);
-                self.had_whitespace = false;
 
                 if c == '}' {
                     if let Some((quote, is_multiline)) = self.string_stack.pop() {
@@ -125,12 +112,8 @@ impl Scanner {
             }
 
             '-' => {
-                self.had_whitespace = false;
                 let next = self.peek();
                 let next_next = self.peek_next();
-
-                // Здесь 'next' — это потенциальная 'I'.
-                // Значит nfinity начинается с ПЕРВОГО символа после current (offset 1)
                 let is_inf = (next == Some('I') || next == Some('i')) && self.check_infinity(1);
 
                 if next == Some('>') {
@@ -145,15 +128,9 @@ impl Scanner {
             }
 
             _ => {
-                self.had_whitespace = false;
-                self.is_at_line_start = false;
-
                 if c.is_digit(10) {
                     self.scan_number();
-                }
-                // Здесь 'c' — это уже поглощенная 'I'.
-                // Значит nfinity начинается сразу с НУЛЕВОГО символа от current (offset 0)
-                else if (c == 'I' || c == 'i') && self.check_infinity(0) {
+                } else if (c == 'I' || c == 'i') && self.check_infinity(0) {
                     self.scan_infinity_as_number();
                 } else if c.is_alphabetic() || c == '_' {
                     self.scan_identifier();
@@ -164,20 +141,105 @@ impl Scanner {
         }
     }
 
+    // --- Методы добавления токенов с поддержкой флагов ---
+
+    fn add_token_raw(&mut self, t_type: TokenType) {
+        // Системные токены не сбрасывают флаг начала строки и не используют had_whitespace
+        let is_start = if matches!(
+            t_type,
+            TokenType::Indent | TokenType::Dedent | TokenType::SOF | TokenType::Newline
+        ) {
+            false
+        } else {
+            let res = self.is_at_line_start;
+            if res {
+                self.is_at_line_start = false;
+            }
+            res
+        };
+
+        // Для системных токенов обычно не важен предшествующий пробел
+        let has_ws = if matches!(
+            t_type,
+            TokenType::Indent | TokenType::Dedent | TokenType::Newline
+        ) {
+            false
+        } else {
+            let res = self.had_whitespace;
+            self.had_whitespace = false;
+            res
+        };
+
+        self.tokens.push(Token::new(
+            t_type,
+            is_start,
+            has_ws,
+            "".into(),
+            None,
+            self.start_position,
+            0,
+        ));
+    }
+
+    fn add_token(&mut self, t_type: TokenType) {
+        let text = self.get_lexeme();
+        let len = text.len();
+
+        let is_start = self.is_at_line_start;
+        if is_start {
+            self.is_at_line_start = false;
+        }
+
+        let has_ws = self.had_whitespace;
+        self.had_whitespace = false;
+
+        self.tokens.push(Token::new(
+            t_type,
+            is_start,
+            has_ws,
+            text,
+            None,
+            self.start_position,
+            len,
+        ));
+    }
+
+    fn add_token_with_literal(&mut self, t_type: TokenType, literal: String) {
+        let text = self.get_lexeme();
+        let len = text.len();
+
+        let is_start = self.is_at_line_start;
+        if is_start {
+            self.is_at_line_start = false;
+        }
+
+        let has_ws = self.had_whitespace;
+        self.had_whitespace = false;
+
+        self.tokens.push(Token::new(
+            t_type,
+            is_start,
+            has_ws,
+            text,
+            Some(literal),
+            self.start_position,
+            len,
+        ));
+    }
+
+    // --- Остальные методы (без изменений логики, только поддержка) ---
+
     fn scan_identifier(&mut self) {
         while let Some(c) = self.peek() {
             if c == '$' && self.peek_next() == Some('{') {
                 break;
             }
-
             if c == '-' {
                 let next = self.peek_next();
                 let next_next = self.peek_at(2);
-
                 let is_normal_id_part =
                     next.map_or(false, |n| n.is_alphanumeric()) && next != Some('>');
                 let is_link_to_interpolation = next == Some('$') && next_next == Some('{');
-
                 if is_normal_id_part || is_link_to_interpolation {
                     self.advance();
                     continue;
@@ -185,27 +247,19 @@ impl Scanner {
                     break;
                 }
             }
-
             if c.is_alphanumeric() || c == '_' {
                 self.advance();
             } else {
                 break;
             }
         }
-
         let text = self.get_lexeme();
         let t_type = get_keyword_token(&text).unwrap_or(TokenType::Identifier);
         self.add_token(t_type);
     }
 
-    fn peek_at(&self, distance: usize) -> Option<char> {
-        self.source.get(self.current + distance).copied()
-    }
-
     fn scan_number(&mut self) {
         let mut radix: u32 = 10;
-
-        // Проверка префиксов
         if self.source[self.start] == '0' {
             if let Some(second) = self.peek() {
                 match second.to_ascii_lowercase() {
@@ -228,104 +282,34 @@ impl Scanner {
                     'c' => {
                         radix = 33;
                         self.advance();
-                    } // Используем 33 как спец-маркер для Crockford
-                    _ => {} // Остаемся в 10-ричной (просто ноль)
+                    }
+                    _ => {}
                 }
             }
         }
-
-        // Поглощение основной части числа
         self.consume_digits_with_underscore(radix);
-
-        // Дробная часть (только для десятичных чисел)
         if radix == 10 && self.peek() == Some('.') {
             if let Some(next) = self.peek_next() {
                 if next.is_digit(10) {
-                    self.advance(); // Поглощаем '.'
+                    self.advance();
                     self.consume_digits_with_underscore(10);
                 }
             }
         }
-
         let value_literal = self.get_slice(self.start, self.current);
+        self.process_unit_suffix(value_literal);
+    }
 
-        // Обработка суффиксов (единиц измерения)
+    fn process_unit_suffix(&mut self, value_literal: String) {
         if let Some(c) = self.peek() {
             if c == '%' {
                 self.advance();
                 self.add_token_with_literal(TokenType::UnitPercent, value_literal);
                 return;
             }
-
-            // Проверяем, является ли следующий символ началом юнита
             if c.is_alphabetic() || c == 'µ' || c == 'μ' || c == 'Ω' || c == '\u{00B0}' {
                 let suffix_start = self.current;
                 let pos_before_suffix = self.position;
-
-                while let Some(nc) = self.peek() {
-                    // Юниты могут содержать буквы, цифры, греческие символы и дробную черту
-                    if nc.is_alphanumeric()
-                        || nc == '/'
-                        || nc == 'µ'
-                        || nc == 'μ'
-                        || nc == 'Ω'
-                        || nc == '\u{00B0}'
-                    {
-                        self.advance();
-                    } else {
-                        break;
-                    }
-                }
-
-                let suffix = self.get_slice(suffix_start, self.current);
-                let unit_type = get_unit_type(&suffix);
-
-                if let Some(t_type) = unit_type {
-                    self.add_token_with_literal(t_type, value_literal);
-                    return;
-                } else {
-                    // Если это не юнит, откатываемся назад (это может быть начало другого токена)
-                    self.current = suffix_start;
-                    self.position = pos_before_suffix;
-                }
-            }
-        }
-
-        self.add_token_with_literal(TokenType::Number, value_literal);
-    }
-
-    fn check_infinity(&self, offset: usize) -> bool {
-        let expected = "nfinity";
-        for (i, ch) in expected.chars().enumerate() {
-            // offset позволяет нам "перепрыгнуть" 'I' или 'i'
-            if self.peek_at(i + offset).map(|c| c.to_ascii_lowercase()) != Some(ch) {
-                return false;
-            }
-        }
-        true
-    }
-
-    fn scan_infinity_as_number(&mut self) {
-        // Поглощаем "nfinity" (буква 'I' уже поглощена в scan_token)
-        for _ in 0..7 {
-            self.advance();
-        }
-
-        let value_literal = "Infinity".to_string();
-
-        // А теперь магия: используем уже готовую у тебя логику юнитов!
-        // Просто копируем блок обработки суффиксов из scan_number
-        if let Some(c) = self.peek() {
-            if c == '%' {
-                self.advance();
-                self.add_token_with_literal(TokenType::UnitPercent, value_literal);
-                return;
-            }
-
-            if c.is_alphabetic() || c == 'µ' || c == 'μ' || c == 'Ω' || c == '\u{00B0}' {
-                let suffix_start = self.current;
-                let pos_before_suffix = self.position;
-
                 while let Some(nc) = self.peek() {
                     if nc.is_alphanumeric()
                         || nc == '/'
@@ -339,7 +323,6 @@ impl Scanner {
                         break;
                     }
                 }
-
                 let suffix = self.get_slice(suffix_start, self.current);
                 if let Some(t_type) = get_unit_type(&suffix) {
                     self.add_token_with_literal(t_type, value_literal);
@@ -350,21 +333,23 @@ impl Scanner {
                 }
             }
         }
-
-        // Если юнита нет, просто добавляем Infinity как число или спец. токен
-        // У тебя в get_keyword_token скорее всего уже есть логика для Infinity,
-        // но здесь мы его классифицируем как Number для парсера.
         self.add_token_with_literal(TokenType::Number, value_literal);
     }
 
-    /// Вспомогательная функция для поглощения цифр и разделителя '_'
+    fn scan_infinity_as_number(&mut self) {
+        for _ in 0..7 {
+            self.advance();
+        }
+        let value_literal = "Infinity".to_string();
+        self.process_unit_suffix(value_literal);
+    }
+
     fn consume_digits_with_underscore(&mut self, radix: u32) {
         while let Some(c) = self.peek() {
             if c == '_' {
                 self.advance();
                 continue;
             }
-
             let is_valid = match radix {
                 2 => c == '0' || c == '1',
                 8 => c >= '0' && c <= '7',
@@ -375,19 +360,11 @@ impl Scanner {
                         || (c.to_ascii_lowercase() >= 'a' && c.to_ascii_lowercase() <= 'v')
                 }
                 33 => {
-                    // Crockford: 0-9, A-Z кроме I, L, O, U
                     let lower = c.to_ascii_lowercase();
-                    c.is_digit(10)
-                        || (lower >= 'a'
-                            && lower <= 'z'
-                            && lower != 'i'
-                            && lower != 'l'
-                            && lower != 'o'
-                            && lower != 'u')
+                    c.is_digit(10) || (lower >= 'a' && lower <= 'z' && !"ilou".contains(lower))
                 }
                 _ => false,
             };
-
             if is_valid {
                 self.advance();
             } else {
@@ -395,6 +372,7 @@ impl Scanner {
             }
         }
     }
+
     fn scan_string(&mut self, quote: char) {
         let is_multiline = quote == '"' && self.match_char('"') && self.match_char('"');
         self.continue_string_scan(quote, is_multiline);
@@ -410,22 +388,18 @@ impl Scanner {
                 self.advance();
                 continue;
             }
-
             if self.peek() == Some('$') && self.peek_next() == Some('{') {
                 let literal = self.get_slice(content_start, self.current);
                 let t_type = self.get_string_token_type(quote, is_multiline);
                 self.add_token_with_literal(t_type, literal);
-
                 self.string_stack.push((quote, is_multiline));
-
                 self.start = self.current;
                 self.start_position = self.position;
-                self.advance(); // $
-                self.advance(); // {
+                self.advance();
+                self.advance();
                 self.add_token(TokenType::DollarLeftBrace);
                 return;
             }
-
             if is_multiline {
                 if self.peek() == Some('"')
                     && self.peek_next() == Some('"')
@@ -433,12 +407,9 @@ impl Scanner {
                 {
                     break;
                 }
-            } else {
-                if self.peek() == Some(quote) || self.peek() == Some('\n') {
-                    break;
-                }
+            } else if self.peek() == Some(quote) || self.peek() == Some('\n') {
+                break;
             }
-
             let c = self.advance();
             if c == '\\' && !self.is_at_end() {
                 self.advance();
@@ -451,11 +422,9 @@ impl Scanner {
         }
 
         let literal = self.get_slice(content_start, self.current);
-
         for _ in 0..quote_len {
             self.advance();
         }
-
         let t_type = self.get_string_token_type(quote, is_multiline);
         self.add_token_with_literal(t_type, literal);
     }
@@ -468,39 +437,6 @@ impl Scanner {
             '`' => TokenType::GraveQuotedString,
             _ => TokenType::String,
         }
-    }
-
-    fn is_assign_whitespace(&self) -> bool {
-        let last = self.tokens.last().map(|t| &t.token_type);
-        if !matches!(
-            last,
-            Some(TokenType::Identifier)
-                | Some(TokenType::RightParen)
-                | Some(TokenType::RightBracket)
-                | Some(TokenType::Number)
-                | Some(TokenType::UnitPercent)
-                | Some(TokenType::String)
-                | Some(TokenType::SingleQuotedString)
-                | Some(TokenType::GraveQuotedString)
-                | Some(TokenType::MultilineString)
-        ) {
-            return false;
-        }
-
-        let mut look = self.current;
-        while look < self.source.len() && (self.source[look] == ' ' || self.source[look] == '\t') {
-            look += 1;
-        }
-        if look >= self.source.len() {
-            return false;
-        }
-
-        let next_c = self.source[look];
-        next_c.is_alphanumeric()
-            || matches!(
-                next_c,
-                '-' | '"' | '\'' | '`' | '{' | '[' | '(' | '_' | '#' | '$' | '\\'
-            )
     }
 
     fn handle_indentation(&mut self) {
@@ -518,11 +454,9 @@ impl Scanner {
                 _ => break,
             }
         }
-
         if matches!(self.peek(), Some('\n') | Some('\r')) {
             return;
         }
-
         if self.peek() == Some('/')
             && (self.peek_next() == Some('|') || self.peek_next() == Some('*'))
         {
@@ -530,7 +464,6 @@ impl Scanner {
         }
 
         if !self.context_stack.is_empty() {
-            self.is_at_line_start = false;
             self.start = self.current;
             self.start_position = self.position;
             return;
@@ -546,8 +479,6 @@ impl Scanner {
                 self.add_token_raw(TokenType::Dedent);
             }
         }
-
-        self.is_at_line_start = false;
         self.start = self.current;
         self.start_position = self.position;
     }
@@ -598,6 +529,9 @@ impl Scanner {
     fn peek_next(&self) -> Option<char> {
         self.source.get(self.current + 1).copied()
     }
+    fn peek_at(&self, distance: usize) -> Option<char> {
+        self.source.get(self.current + distance).copied()
+    }
     fn is_at_end(&self) -> bool {
         self.current >= self.source.len()
     }
@@ -616,26 +550,14 @@ impl Scanner {
         self.source[start..end].iter().collect()
     }
 
-    fn add_token_raw(&mut self, t_type: TokenType) {
-        self.tokens
-            .push(Token::new(t_type, "".into(), None, self.start_position, 0));
-    }
-    fn add_token(&mut self, t_type: TokenType) {
-        let text = self.get_lexeme();
-        let len = text.len();
-        self.tokens
-            .push(Token::new(t_type, text, None, self.start_position, len));
-    }
-    fn add_token_with_literal(&mut self, t_type: TokenType, literal: String) {
-        let text = self.get_lexeme();
-        let len = text.len();
-        self.tokens.push(Token::new(
-            t_type,
-            text,
-            Some(literal),
-            self.start_position,
-            len,
-        ));
+    fn check_infinity(&self, offset: usize) -> bool {
+        let expected = "nfinity";
+        for (i, ch) in expected.chars().enumerate() {
+            if self.peek_at(i + offset).map(|c| c.to_ascii_lowercase()) != Some(ch) {
+                return false;
+            }
+        }
+        true
     }
 
     fn report_error(&mut self, error_type: LexicalErrorType, message: &str) {

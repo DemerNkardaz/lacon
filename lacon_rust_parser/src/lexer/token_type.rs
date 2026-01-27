@@ -1,6 +1,29 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     // ─────────────────────────────────────────────
+    // Служебные
+    // ─────────────────────────────────────────────
+    Illegal,
+    Invalid, // \\ InvalidToken
+    Error,   // \\ LexicalError
+    Unknown, // \\ UnknownToken
+    SOF,     // \\ StartOfFile
+    EOF,     // \\ EndOfFile
+
+    // ─────────────────────────────────────────────
+    // Layout / whitespace-sensitive синтаксис
+    // ─────────────────────────────────────────────
+    Newline,        // \n \\ LineBreak
+    CarriageReturn, // \r \\ CarriageReturn
+    Indent,         // →  \\ IndentIncrease
+    Dedent,         // ←  \\ IndentDecrease
+
+    // ─────────────────────────────────────────────
+    // Маркер
+    // ─────────────────────────────────────────────
+    Marker,
+
+    // ─────────────────────────────────────────────
     // Структурные символы / разделители
     // ─────────────────────────────────────────────
     LeftParen,          // (  \\ GroupStart
@@ -37,7 +60,6 @@ pub enum TokenType {
     PlusPlus,     // ++ \\ Increment
     MinusMinus,   // -- \\ Decrement
     Equal,        // =  \\ Assign
-    Whitespace,   //   \\ Can be Assign
     PlusEqual,    // += \\ AddAssign
     MinusEqual,   // -= \\ SubAssign
     StarEqual,    // *= \\ MulAssign
@@ -203,10 +225,10 @@ pub enum TokenType {
     // Контекст объекта
     // ─────────────────────────────────────────────
     This,   // this \\ CurrentInstance
-    Super,  // super\\ BaseInstance
+    Origin, // origin \\ OriginSource, позволяет ссылаться на исходный объект (например, инстансу класса на сам класс, вместо того, чтоб прописывать его имя) (текущий статик)
+    Super,  // super\\ BaseInstance (родительский статик)
     Root,   // root \\ ObjectRoot
     Parent, // parent \\ CurrentParent
-    Origin, // origin \\ ObjectOrigin, позволяет ссылаться на исходный объект (например, инстансу класса на сам класс, вместо того, чтоб прописывать его имя)
     Here,   // here \\ CurrentLocation
 
     // ─────────────────────────────────────────────
@@ -236,18 +258,6 @@ pub enum TokenType {
     At,     // @ \\ AttributePrefix
     Hash,   // # \\ Directive / Macro
     Dollar, // $ \\ SpecialIdentifier
-
-    // ─────────────────────────────────────────────
-    // Маркер
-    // ─────────────────────────────────────────────
-    Marker,
-
-    // ─────────────────────────────────────────────
-    // Layout / whitespace-sensitive синтаксис
-    // ─────────────────────────────────────────────
-    Newline, // \n \\ LineBreak
-    Indent,  // →  \\ IndentIncrease
-    Dedent,  // ←  \\ IndentDecrease
 
     // ─────────────────────────────────────────────
     // Доменные типы (Lacon)
@@ -287,13 +297,4 @@ pub enum TokenType {
     UnitForce,               // N  \\ ForceUnit
     UnitArea,                // m2 \\ AreaUnit
     UnitVolume,              // m3 \\ VolumeUnit
-
-    // ─────────────────────────────────────────────
-    // Служебные
-    // ─────────────────────────────────────────────
-    Error,   // \\ LexicalError
-    Unknown, // \\ UnknownToken
-    Invalid, // \\ InvalidToken
-    BOF,     // \\ BeginOfFile
-    EOF,     // \\ EndOfFile
 }
