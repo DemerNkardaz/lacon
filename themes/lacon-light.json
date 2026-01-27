@@ -1,0 +1,9 @@
+{
+  "name": "LaCoN Light",
+  "type": "light",
+  "colors": {
+    "editor.background": "#0f111a",
+    "editor.foreground": "#e0e0e0"
+  },
+  "tokenColors": []
+}

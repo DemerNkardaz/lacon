@@ -170,6 +170,8 @@ pub enum TokenType {
     From,    // from \\ ImportSource
     Include, // include \\ IncludeFile
 
+    New, // new \\ NewInstance
+
     // ─────────────────────────────────────────────
     // Типовая система
     // ─────────────────────────────────────────────
@@ -193,6 +195,7 @@ pub enum TokenType {
     Where,      // where \\ TypeConstraint
     When,       // when \\ ConditionalGuard
     Contains,   // contains \\ CollectionContains
+    With,       // with \\ Composition
 
     // ─────────────────────────────────────────────
     // Контекст объекта
@@ -228,6 +231,11 @@ pub enum TokenType {
     At,     // @ \\ AttributePrefix
     Hash,   // # \\ Directive / Macro
     Dollar, // $ \\ SpecialIdentifier
+
+    // ─────────────────────────────────────────────
+    // Маркер
+    // ─────────────────────────────────────────────
+    Marker,
 
     // ─────────────────────────────────────────────
     // Layout / whitespace-sensitive синтаксис

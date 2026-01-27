@@ -60,6 +60,7 @@ lazy_static! {
         m.insert("export",     TokenType::Export);
         m.insert("from",       TokenType::From);
         m.insert("include",    TokenType::Include);
+        m.insert("new",        TokenType::New);
 
         // --- Типовая система ---
         m.insert("type",       TokenType::Type);
@@ -74,6 +75,7 @@ lazy_static! {
         m.insert("where",      TokenType::Where);
         m.insert("when",       TokenType::When);
         m.insert("contains",   TokenType::Contains);
+        m.insert("with",       TokenType::With);
 
         // --- Литералы-константы ---
         m.insert("true",       TokenType::True);
@@ -115,6 +117,8 @@ lazy_static! {
 
         // --- Константы ---
         m.insert("infinity",        TokenType::NumberInfinity);
+
+        m.insert("Marker", TokenType::Marker);
 
         m
     };

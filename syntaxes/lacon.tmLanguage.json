@@ -196,7 +196,9 @@
         { "name": "keyword.control.flow.lacon", "match": "(?<!\\.)\\b(break|continue|return|yield|exit|cancel)\\b" },
         { "name": "keyword.control.exception.lacon", "match": "(?<!\\.)\\b(try|catch|finally|throw)\\b" },
         { "name": "keyword.control.async.lacon", "match": "(?<!\\.)\\b(await|async|coroutine|defer)\\b" },
-        { "name": "keyword.operator.expression.lacon", "match": "(?<!\\.)\\b(contains|where|as|is|in|of|[eE]xtends|[iI]mplements)\\b" }
+        { "name": "keyword.operator.expression.lacon", "match": "(?<!\\.)\\b(contains|where|with|as|is|in|of|[eE]xtends|[iI]mplements)\\b" },
+        { "name": "support.class.lacon", "match": "(?<!\\.)\\b(new)\\b" },
+        { "name": "support.class.lacon", "match": "(?<!\\.)\\b([mM]arker)\\b" }
       ]
     },
     "storage-modifiers": {
