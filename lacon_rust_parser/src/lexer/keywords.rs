@@ -93,8 +93,9 @@ lazy_static! {
         add(&["undefined"],                    TokenType::Undefined);
         add(&["this"],                         TokenType::This);
         add(&["super"],                        TokenType::Super);
-        add(&["root"],                        TokenType::Root);
-        add(&["parent"],                        TokenType::Parent);
+        add(&["root"],                         TokenType::Root);
+        add(&["parent"],                       TokenType::Parent);
+        add(&["origin"],                       TokenType::Origin);
         add(&["here"],                         TokenType::Here);
 
         // --- Модификаторы доступа и ООП ---

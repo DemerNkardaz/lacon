@@ -206,6 +206,7 @@ pub enum TokenType {
     Super,  // super\\ BaseInstance
     Root,   // root \\ ObjectRoot
     Parent, // parent \\ CurrentParent
+    Origin, // origin \\ ObjectOrigin, позволяет ссылаться на исходный объект (например, инстансу класса на сам класс, вместо того, чтоб прописывать его имя)
     Here,   // here \\ CurrentLocation
 
     // ─────────────────────────────────────────────

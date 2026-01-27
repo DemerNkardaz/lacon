@@ -232,7 +232,7 @@
         { "name": "constant.language.boolean.lacon", "match": "\\b(true|false)\\b" },
         { "name": "constant.language.null.lacon", "match": "\\b(nil|undefined)\\b" },
         { "name": "support.type.lacon", "match": "\\b(none)\\b" },
-        { "name": "variable.language.lacon", "match": "\\b(this|super|root|parent|here)\\b" },
+        { "name": "variable.language.lacon", "match": "\\b(this|super|root|parent|origin|here)\\b" },
         { "name": "variable.language.value.lacon", "match": "\\b(values?|v|vals?)\\b" },
         { "name": "variable.language.method.lacon", "match": "\\b(methods?)\\b" },
         { "name": "variable.language.input.lacon", "match": "\\b(inputs?)\\b" },
