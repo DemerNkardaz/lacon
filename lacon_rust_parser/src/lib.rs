@@ -258,3 +258,160 @@ const emptyItem = [value, , value]
         }
     }
 }
+
+#[cfg(test)]
+mod tests_calcs {
+    use crate::shared::unit::units::UNITS;
+
+    #[test]
+    fn calcs() {
+        // Список шкал (без дублирования K в конце, замыкаем вручную)
+        let symbols = ["K", "C", "F", "Ra", "N", "D", "Re", "Ro", "L", "W", "C", "Ro", "F", "C", "L", "Da"];
+        let mut val = 0.00001; // Стартовая точка (0°C)
+
+        println!("Starting UNBIASED circular test: 273.15K (3 rounds)");
+        println!("--------------------------------------------------");
+
+        for round in 1..=3 {
+            let mut row = Vec::new();
+            // Запоминаем значение в начале раунда
+            row.push(format!("{:.4}{}", val, symbols[0]));
+
+            // Проход по цепочке внутри массива symbols
+            for window in symbols.windows(2) {
+                let from_sym = window[0];
+                let to_sym = window[1];
+
+                // Находим юниты. Сравнение &str == &str
+                let from_unit = UNITS.iter().find(|u| u.symbol == from_sym)
+                    .unwrap_or_else(|| panic!("Unit {} not found", from_sym));
+                let to_unit = UNITS.iter().find(|u| u.symbol == to_sym)
+                    .unwrap_or_else(|| panic!("Unit {} not found", to_sym));
+
+                let base = from_unit.normalize(val);
+                val = to_unit.denormalize(base);
+
+                row.push(format!("{:.4}{}", val, to_sym));
+            }
+
+            // --- ЗАМЫКАНИЕ ЦИКЛА: W -> K ---
+            // Чтобы Round 2 начался честно, переводим результат последнего юнита в первый
+            let last_sym = symbols.last().unwrap();
+            let first_sym = symbols[0];
+
+            let from_last = UNITS.iter().find(|u| u.symbol == *last_sym).unwrap();
+            let to_first = UNITS.iter().find(|u| u.symbol == first_sym).unwrap();
+
+            let base_final = from_last.normalize(val);
+            val = to_first.denormalize(base_final); 
+
+            // Печатаем строку цикла. В конце строки будет значение ПОСЛЕ перехода W -> K
+            println!("Round {}: {} -> {:.4}{}", round, row.join(" -> "), val, first_sym);
+        }
+
+        println!("--------------------------------------------------");
+        let diff = (val - 273.15).abs();
+        if diff < 1e-9 {
+            println!("SUCCESS: Total drift after 3 rounds is negligible ({:.2e})", diff);
+        } else {
+            println!("WARNING: Precision drift detected: {:.2e}", diff);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_prefixes {
+    use crate::shared::unit::units::UNITS;
+    use crate::shared::unit::prefixes::PREFIXES; // Твой массив префиксов
+
+    // Вспомогательная функция для теста
+    fn convert(val: f64, from_p: &str, to_p: &str, unit_sym: &str) -> f64 {
+        let unit = UNITS.iter().find(|u| u.symbol == unit_sym).expect("Unit not found");
+        
+        // Находим множители префиксов (пустая строка "" = 1.0)
+        let f_mul = if from_p.is_empty() { 1.0 } else {
+            PREFIXES.iter().find(|(s, _, _)| *s == from_p).map(|(_, m, _)| *m).unwrap()
+        };
+        let t_mul = if to_p.is_empty() { 1.0 } else {
+            PREFIXES.iter().find(|(s, _, _)| *s == to_p).map(|(_, m, _)| *m).unwrap()
+        };
+
+        // Логика: (Значение * Префикс) -> Normalize -> Denormalize -> / Целевой Префикс
+        let base = unit.normalize(val * f_mul);
+        unit.denormalize(base) / t_mul
+    }
+
+    #[test]
+    fn prefix_drifting() {
+        // Цепочка префиксов для грамма (g): 
+        // g -> kg -> mg -> Gg -> ng -> Tg -> pg -> g
+        let sequence = ["", "k", "m", "G", "n", "T", "p", ""];
+        let unit_sym = "g";
+        let mut val = 1.0;
+
+        println!("Starting SI Prefix test for '{}' (3 rounds)", unit_sym);
+        println!("--------------------------------------------------");
+
+        for round in 1..=3 {
+            let mut row = Vec::new();
+            row.push(format!("{:.4e}{}{}", val, sequence[0], unit_sym));
+
+            for window in sequence.windows(2) {
+                let from_p = window[0];
+                let to_p = window[1];
+
+                val = convert(val, from_p, to_p, unit_sym);
+                row.push(format!("{:.4e}{}{}", val, to_p, unit_sym));
+            }
+
+            println!("Round {}: {}", round, row.join(" -> "));
+        }
+
+        println!("--------------------------------------------------");
+        let drift = (val - 1.0).abs();
+        if drift < 1e-12 {
+            println!("SUCCESS: Prefix drift is negligible ({:.2e})", drift);
+        } else {
+            println!("WARNING: Precision loss in prefixes: {:.2e}", drift);
+        }
+    }
+		#[test]
+fn megagram_base_test() {
+    // Цепочка префиксов: Mg -> g -> kg -> ug -> Gg -> mg -> Mg
+    let sequence = ["M", "", "k", "μ", "G", "m", "M"];
+    let unit_sym = "g";
+    
+    // Мы начинаем с 1 Мегаграмма
+    let mut val = 1.0; 
+    let initial_val = 1.0;
+
+    println!("Starting Megagram (Mg) Base Test (3 rounds)");
+    println!("Formula: val (in current prefix) -> normalize -> denormalize -> target prefix");
+    println!("--------------------------------------------------");
+
+    for round in 1..=3 {
+        let mut row = Vec::new();
+        row.push(format!("{:.4e}{}{}", val, sequence[0], unit_sym));
+
+        for window in sequence.windows(2) {
+            let from_p = window[0];
+            let to_p = window[1];
+
+            // Наша функция convert (из прошлого блока)
+            val = convert(val, from_p, to_p, unit_sym);
+            row.push(format!("{:.4e}{}{}", val, to_p, unit_sym));
+        }
+
+        println!("Round {}: {}", round, row.join(" -> "));
+    }
+
+    println!("--------------------------------------------------");
+    let drift = (val - initial_val).abs();
+    if drift < 1e-12 {
+        println!("SUCCESS: Stability maintained relative to Mg ({:.2e})", drift);
+    } else {
+        println!("WARNING: Drift detected: {:.2e}", drift);
+    }
+}
+}
+
