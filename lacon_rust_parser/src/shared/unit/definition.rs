@@ -1,23 +1,21 @@
 use super::dimensions::Dimension;
-use super::props::{UnitProps, CalcMode};
-use super::units::UNIT_PROPS;
+use super::props::{CalcMode, UnitProps};
 
 pub enum PrefixGroup {
     SI,
-		Thermal, // Temperature
+    Thermal, // Temperature
     Metric,
     None,
     Digital,
 }
 
 pub struct UnitDef {
-		pub symbol: &'static str,
-		pub dimension: Dimension,
-		pub parts: Option<(&'static str, &'static str)>,
-		pub numerator_group: PrefixGroup,
-		pub denominator_group: PrefixGroup,
-		pub scale: f64,
-		pub offset: f64,
+    pub symbol: &'static str,
+    pub dimension: Dimension,
+    pub parts: Option<(&'static str, &'static str)>,
+    pub props: UnitProps,
+    pub numerator_group: PrefixGroup,
+    pub denominator_group: PrefixGroup,
 }
 
 impl UnitDef {
@@ -27,6 +25,7 @@ impl UnitDef {
         parts: Option<(&'static str, &'static str)>,
         n_grp: PrefixGroup,
         d_grp: PrefixGroup,
+        props: UnitProps,
     ) -> Self {
         Self {
             symbol,
@@ -34,45 +33,19 @@ impl UnitDef {
             parts,
             numerator_group: n_grp,
             denominator_group: d_grp,
-						scale: 1.0,
-						offset: 0.0
-        }
-    }
-		
-		pub const fn new_offset(
-        symbol: &'static str,
-        dimension: Dimension,
-        parts: Option<(&'static str, &'static str)>,
-        n_grp: PrefixGroup,
-        d_grp: PrefixGroup,
-				scale: f64,
-				offset: f64
-    ) -> Self {
-        Self {
-            symbol,
-            dimension,
-            parts,
-            numerator_group: n_grp,
-            denominator_group: d_grp,
-						scale,
-						offset
+            props,
         }
     }
 
     pub fn get_props(&self) -> &UnitProps {
-        for (sym, props) in UNIT_PROPS {
-            if *sym == self.symbol {
-                return props;
-            }
-        }
-        &UnitProps::DEFAULT
+        &self.props
     }
 }
 
 impl UnitDef {
     pub fn normalize(&self, value: f64) -> f64 {
         let props = self.get_props();
-        
+
         match props.mode {
             CalcMode::Linear => (value * props.scale) + props.offset,
             CalcMode::Exponential => {
@@ -97,4 +70,38 @@ impl UnitDef {
             }
         }
     }
+}
+
+#[macro_export]
+macro_rules! units_array {
+    // Обработка @multi
+    (
+        [$($accumulated:tt)*]
+        @multi [$($symbol:expr),+] $suffix:expr, $dim:expr, ($ng:expr, $dg:expr), $props:expr,
+        $($rest:tt)*
+    ) => {
+        units_array![
+            [$($accumulated)* $(UnitDef::new(concat!($symbol, $suffix), $dim, None, $ng, $dg, $props),)+]
+            $($rest)*
+        ]
+    };
+
+    // Обработка обычного элемента
+    (
+        [$($accumulated:tt)*]
+        $item:expr,
+        $($rest:tt)*
+    ) => {
+        units_array![
+            [$($accumulated)* $item,]
+            $($rest)*
+        ]
+    };
+
+    // Финальный случай
+    (
+        [$($accumulated:tt)*]
+    ) => {
+        &[$($accumulated)*]
+    };
 }

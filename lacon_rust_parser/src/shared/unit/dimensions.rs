@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub enum Dimension {
     Degree,              // deg \\ AngleDegree
     Radian,              // rad \\ AngleRadian
