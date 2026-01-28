@@ -4,17 +4,8 @@ use crate::lexer::operators::match_operator;
 use crate::lexer::position::Position;
 use crate::lexer::token::Token;
 use crate::lexer::token_type::TokenType;
-use crate::shared::unit::units::{UNITS, UNITS_REGEX};
 use crate::utils::unit::get_unit_type;
-use lazy_static::lazy_static;
-use regex::Regex;
 
-lazy_static! {
-    static ref RE_UNIT: Regex = {
-        let pattern = UNITS_REGEX.trim_start_matches('^');
-        Regex::new(&format!("({})", pattern)).expect("Invalid Units Regex")
-    };
-}
 pub struct Scanner {
     source: Vec<char>,
     tokens: Vec<Token>,
@@ -308,39 +299,8 @@ impl Scanner {
         let value_literal = self.get_slice(self.start, self.current);
         self.process_unit_suffix(value_literal);
     }
+
     fn process_unit_suffix(&mut self, value_literal: String) {
-        // 1. Создаем строку из остатка исходного кода
-        // Ограничиваем длину (например, 20 символов), так как юниты длинными не бывают
-        let max_suffix_len = 20;
-        let end_idx = std::cmp::min(self.current + max_suffix_len, self.source.len());
-        let lookahead: String = self.source[self.current..end_idx].iter().collect();
-
-        // 2. Пытаемся найти юнит в начале этого "взгляда вперед"
-        print!("lookahead: {}", lookahead);
-        print!("{}", RE_UNIT.as_str());
-        if let Some(mat) = RE_UNIT.find(&lookahead) {
-            let unit_str = mat.as_str();
-            let unit_char_count = unit_str.chars().count();
-
-            // Продвигаем сканнер
-            for _ in 0..unit_char_count {
-                self.advance();
-            }
-
-            // Добавляем токен Unit
-            // Важно: передаем value_literal (само число), чтобы сохранить его значение
-            self.add_token_with_literal(TokenType::Unit, value_literal);
-        } else {
-            // Если регекс не нашел юнита, проверяем на % или оставляем просто Number
-            if self.peek() == Some('%') {
-                self.advance();
-                self.add_token_with_literal(TokenType::UnitPercent, value_literal);
-            } else {
-                self.add_token_with_literal(TokenType::Number, value_literal);
-            }
-        }
-    }
-    fn process_unit_suffix2(&mut self, value_literal: String) {
         if let Some(c) = self.peek() {
             if c == '%' {
                 self.advance();

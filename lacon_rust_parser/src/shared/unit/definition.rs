@@ -1,12 +1,25 @@
 use super::dimensions::Dimension;
 use super::props::{CalcMode, UnitProps};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PrefixGroup {
     SI,
     Thermal, // Temperature
     Metric,
     None,
     Digital,
+}
+
+impl PrefixGroup {
+    pub const fn regex_pattern(&self) -> &'static str {
+        match self {
+            PrefixGroup::SI => "(?:da|[QRYZEPTGMkhdcmμnpfazyrq])",
+            PrefixGroup::Thermal => "(?:deg|°)",
+            PrefixGroup::None => "",
+            PrefixGroup::Metric => "",
+            PrefixGroup::Digital => "",
+        }
+    }
 }
 
 pub struct UnitDef {

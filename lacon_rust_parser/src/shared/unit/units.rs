@@ -1,6 +1,9 @@
 use super::definition::{PrefixGroup, UnitDef};
 use super::dimensions::Dimension;
 use super::props::{CalcMode, Formula, UnitProps};
+use lazy_static::lazy_static;
+use std::collections::HashMap;
+use std::sync::LazyLock;
 
 pub static UNITS: &[UnitDef] = units_array![
     []
@@ -445,49 +448,49 @@ pub static UNITS: &[UnitDef] = units_array![
         PrefixGroup::None,
         UnitProps::DEFAULT,
     ),
-    @multi ["deg", "\u{00B0}"] "C", Dimension::Temperature, (PrefixGroup::Thermal, PrefixGroup::Thermal), UnitProps {
+    @multi ["deg", "\u{00B0}"] "C", Dimension::Temperature, (PrefixGroup::None, PrefixGroup::None), UnitProps {
         offset: 273.15,
         ..UnitProps::DEFAULT
     },
-    @multi ["deg", "\u{00B0}"] "F", Dimension::Temperature, (PrefixGroup::Thermal, PrefixGroup::Thermal), UnitProps {
+    @multi ["deg", "\u{00B0}"] "F", Dimension::Temperature, (PrefixGroup::None, PrefixGroup::None), UnitProps {
         scale: 5.0 / 9.0,
         offset: 255.37222222222222,
         ..UnitProps::DEFAULT
     },
-    @multi ["deg", "\u{00B0}"] "Ra", Dimension::Temperature, (PrefixGroup::Thermal, PrefixGroup::Thermal), UnitProps {
+    @multi ["deg", "\u{00B0}"] "Ra", Dimension::Temperature, (PrefixGroup::None, PrefixGroup::None), UnitProps {
         scale: 5.0 / 9.0,
         ..UnitProps::DEFAULT
     },
-    @multi ["deg", "\u{00B0}"] "N", Dimension::Temperature, (PrefixGroup::Thermal, PrefixGroup::Thermal), UnitProps {
+    @multi ["deg", "\u{00B0}"] "N", Dimension::Temperature, (PrefixGroup::None, PrefixGroup::None), UnitProps {
         scale: 100.0 / 33.0,
         offset: 273.15,
         ..UnitProps::DEFAULT
     },
-    @multi ["deg", "\u{00B0}"] "D", Dimension::Temperature, (PrefixGroup::Thermal, PrefixGroup::Thermal), UnitProps {
+    @multi ["deg", "\u{00B0}"] "D", Dimension::Temperature, (PrefixGroup::None, PrefixGroup::None), UnitProps {
         scale: -2.0 / 3.0,
         offset: 373.15,
         ..UnitProps::DEFAULT
     },
-    @multi ["deg", "\u{00B0}"] "Re", Dimension::Temperature, (PrefixGroup::Thermal, PrefixGroup::Thermal), UnitProps {
+    @multi ["deg", "\u{00B0}"] "Re", Dimension::Temperature, (PrefixGroup::None, PrefixGroup::None), UnitProps {
         scale: 1.25,
         offset: 273.15,
         ..UnitProps::DEFAULT
     },
-    @multi ["deg", "\u{00B0}"] "Ro", Dimension::Temperature, (PrefixGroup::Thermal, PrefixGroup::Thermal), UnitProps {
+    @multi ["deg", "\u{00B0}"] "Ro", Dimension::Temperature, (PrefixGroup::None, PrefixGroup::None), UnitProps {
         scale: 40.0 / 21.0,
         offset: 258.864286,
         ..UnitProps::DEFAULT
     },
-    @multi ["deg", "\u{00B0}"] "L", Dimension::Temperature, (PrefixGroup::Thermal, PrefixGroup::Thermal), UnitProps {
+    @multi ["deg", "\u{00B0}"] "L", Dimension::Temperature, (PrefixGroup::None, PrefixGroup::None), UnitProps {
         offset: 20.15,
         ..UnitProps::DEFAULT
     },
-    @multi ["deg", "\u{00B0}"] "W", Dimension::Temperature, (PrefixGroup::Thermal, PrefixGroup::Thermal), UnitProps {
+    @multi ["deg", "\u{00B0}"] "W", Dimension::Temperature, (PrefixGroup::None, PrefixGroup::None), UnitProps {
         scale: 24.857191,
         offset: 542.15,
         ..UnitProps::DEFAULT
     },
-    @multi ["deg", "\u{00B0}"] "Da", Dimension::Temperature, (PrefixGroup::Thermal, PrefixGroup::Thermal), UnitProps {
+    @multi ["deg", "\u{00B0}"] "Da", Dimension::Temperature, (PrefixGroup::None, PrefixGroup::None), UnitProps {
         scale: 373.15,
         offset: 273.15,
         mode: CalcMode::Exponential,
@@ -553,6 +556,40 @@ pub static UNITS: &[UnitDef] = units_array![
     ),
 ];
 
+lazy_static! {
+    pub static ref UNITS_REGEX: LazyLock<String> = LazyLock::new(|| build_unit_regex(&UNITS));
+}
+
+pub fn build_unit_regex(units: &[UnitDef]) -> String {
+    let mut groups: HashMap<PrefixGroup, Vec<&str>> = HashMap::new();
+
+    for unit in units {
+        groups
+            .entry(unit.numerator_group)
+            .or_default()
+            .push(unit.symbol);
+    }
+
+    let mut all_patterns = Vec::new();
+
+    for (group, mut symbols) in groups {
+        symbols.sort_by(|a, b| b.len().cmp(&a.len()));
+
+        let prefix_re = group.regex_pattern();
+        let symbols_re = symbols.join("|");
+
+        if prefix_re.is_empty() {
+            all_patterns.push(format!("(?:{})", symbols_re));
+        } else {
+            all_patterns.push(format!("(?:{})?(?:{})", prefix_re, symbols_re));
+        }
+    }
+
+    all_patterns.sort_by(|a, b| b.len().cmp(&a.len()));
+
+    format!("(?P<unit>{})", all_patterns.join("|"))
+}
+
 #[test]
 fn test_degc_units_exist() {
     let degc = UNITS.iter().find(|u| u.symbol == "degC");
@@ -573,4 +610,5 @@ fn test_degc_units_exist() {
 
     println!("✓ degC symbol: {}", degc.symbol);
     println!("✓ °C symbol: {}", degree_c.symbol);
+    println!("{}", UNITS_REGEX.as_str());
 }

@@ -38,6 +38,7 @@ mod tests {
     #[test]
     fn test_lexer_to_file() {
         let source = r#"
+				key = 1g
 25 ∸ 100
 string ≣ string
 

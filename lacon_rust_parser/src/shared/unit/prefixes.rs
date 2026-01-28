@@ -27,11 +27,9 @@ pub static PREFIXES: &[(&str, f64, PrefixGroup)] = &[
     ("y", 1e-24, PrefixGroup::SI), // иотто
     ("r", 1e-27, PrefixGroup::SI), // ронто
     ("q", 1e-30, PrefixGroup::SI), // квекто
-
-		// Температура
+    // Температура
     ("deg", 1.0, PrefixGroup::Thermal),
     ("\u{00B0}", 1.0, PrefixGroup::Thermal),
-
     // Эти — только для PrefixGroup::Digital
     ("Ki", 1024.0, PrefixGroup::Digital),
     ("Mi", 1048576.0, PrefixGroup::Digital),
