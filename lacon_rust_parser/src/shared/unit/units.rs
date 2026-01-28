@@ -62,6 +62,7 @@ pub static UNITS: &[UnitDef] = units_array![
         PrefixGroup::SI,
         PrefixGroup::SI,
         UnitProps {
+            exponent: 2.0,
             formula: Formula::Complex {
                 num: &[Dimension::Mass],
                 den: &[Dimension::Length, Dimension::Length],
@@ -76,6 +77,7 @@ pub static UNITS: &[UnitDef] = units_array![
         PrefixGroup::SI,
         PrefixGroup::SI,
         UnitProps {
+            exponent: 3.0,
             formula: Formula::Complex {
                 num: &[Dimension::Mass],
                 den: &[Dimension::Length, Dimension::Length, Dimension::Length],
@@ -105,6 +107,7 @@ pub static UNITS: &[UnitDef] = units_array![
         PrefixGroup::SI,
         PrefixGroup::SI,
         UnitProps {
+            exponent: 2.0,
             formula: Formula::Complex {
                 num: &[Dimension::Length],
                 den: &[Dimension::Time, Dimension::Time],
@@ -119,6 +122,7 @@ pub static UNITS: &[UnitDef] = units_array![
         PrefixGroup::SI,
         PrefixGroup::SI,
         UnitProps {
+            exponent: 3.0,
             formula: Formula::Complex {
                 num: &[Dimension::Length],
                 den: &[Dimension::Time, Dimension::Time, Dimension::Time],
@@ -133,6 +137,7 @@ pub static UNITS: &[UnitDef] = units_array![
         PrefixGroup::SI,
         PrefixGroup::SI,
         UnitProps {
+            exponent: 4.0,
             formula: Formula::Complex {
                 num: &[Dimension::Length],
                 den: &[
@@ -152,6 +157,7 @@ pub static UNITS: &[UnitDef] = units_array![
         PrefixGroup::SI,
         PrefixGroup::SI,
         UnitProps {
+            exponent: 5.0,
             formula: Formula::Complex {
                 num: &[Dimension::Length],
                 den: &[
@@ -172,6 +178,7 @@ pub static UNITS: &[UnitDef] = units_array![
         PrefixGroup::SI,
         PrefixGroup::SI,
         UnitProps {
+            exponent: 6.0,
             formula: Formula::Complex {
                 num: &[Dimension::Length],
                 den: &[
